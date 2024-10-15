@@ -7,7 +7,7 @@ import requests
 
 ## Workflow for thematic analysis
 ## 1: familarise with data through summarisation
-## 2: iteratively attach codes to data fragments
+## 2: iteratively attach tags to data fragments
 ## 3: Search for Themes (Pattern Identification)  
 
 
@@ -39,18 +39,36 @@ def cosine_distance(emb1:list, emb2:list):
     """
     return 1 - dot(emb1, emb2) / (norm(emb1) * norm(emb2))
 
-def str_to_embs(input: str):
+def get_ollama_embs(token:str, input: str):
     """
     Convert the sent string to embeddings
     """
-    payload = {
-        "input": input
+#     curl -X 'POST' \
+#   'http://127.0.0.1:8080/ollama/api/embeddings' \
+#   -H 'accept: application/json' \
+#   -H 'Content-Type: application/json' \
+#   -d '{
+#   "model": "mxbai-embed-large:latest",
+#   "prompt": "this is my text",
+#   "options": {},
+#   "keep_alive": 0
+# }'
+
+    url = f'http://localhost:8080/ollama/api/embeddings'
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
     }
-    response = api_call('/api/embeddings', payload)
-    
-    if response:
-        return response['embeddings']
-    return None
+    data = {
+        "model": "mxbai-embed-large:latest",
+        "prompt": f"{input}",
+        "options": {},
+        "keep_alive": 0
+    }
+    response = requests.post(url, headers=headers, json=data)
+    data = response.json()
+    return data["embeddings"]
+
 
 
 def get_all_doc_frags_from_datastore(datatore_name:str):
@@ -135,10 +153,9 @@ def get_document_contents(token, file_id):
 
     return response.json()["content"]
 
-
-def s1_summarise_document(token:str, docstring: str):
+def get_chat_completion(token:str, prompt:str, max_tokens=100):
     """
-`   instruct the LLM to generate a summary of the sent document
+    generic function to do a chat completion
     """
     url = f'http://localhost:8080/api/chat/completions'
     headers = {
@@ -150,90 +167,95 @@ def s1_summarise_document(token:str, docstring: str):
       "messages": [
         {
           "role": "user",
-          "content": f"Please generate a summary of the following document\n\n{docstring}"
+          "content": f"{prompt}"
         }
       ]
     }
     response = requests.post(url, headers=headers, json=data)
-    return response.json()
+    data = response.json()
+    text = data["choices"][0]["message"]["content"]
+    return text
+
+def s1_summarise_document(token:str, docstring: str):
+    """
+    Familiarising ourselves with the data...
+`   instruct the LLM to generate a summary of the sent document
+    """
+    prompt = f"Please generate a summary of the following document\n\n{docstring}"
+    result = get_chat_completion(token, prompt)
+    return result     
     
 
-def s2b_filter_codes(new_codes: list, existing_code_embs: dict, similarity_threshold: float = 0.9):
+def s2b_filter_tags(new_tags: list, existing_code_embs: dict, similarity_threshold: float = 0.9):
     """
-    remove codes from new_codes that are excessively similar to 
+    remove tags from new_tags that are excessively similar to 
     items in existing_code_embs.keys() and swap them for the key from existing_code_enbs
-    use cosine distance in embedding space so convert codes to embedding space 
+    use cosine distance in embedding space so convert tags to embedding space 
     similar means being below similarity threshold
-    new_codes: list of new codes
+    new_tags: list of new tags
     existing_code_embs: dict mapping code to embeddings
-    return items from new_codes that are not excessively similar, as well as excessively similar matches from existing_code_embs
+    return items from new_tags that are not excessively similar, as well as excessively similar matches from existing_code_embs
     """
-    filtered_codes = []
-    for code in new_codes:
-        code_emb = str_to_embs(code)
+    filtered_tags = []
+    for code in new_tags:
+        code_emb = get_ollama_embs(code)
         similar_found = False
         for existing_code, existing_emb in existing_code_embs.items():
             if cosine_distance(code_emb, existing_emb) < similarity_threshold:
                 similar_found = True
-                filtered_codes.append(existing_code)
+                filtered_tags.append(existing_code)
                 break
         if not similar_found:
-            filtered_codes.append(code)
-    return filtered_codes
+            filtered_tags.append(code)
+    return filtered_tags
 
-def s2a_generate_codes(doc_fragment: str):
+def s2a_generate_tags(token:str, doc_fragment: str):
     """
-    Generate new codes for the sent document fragment
-    Return generated codes
+    Generate new tags for the sent document fragment
+    Return generated tags
     """
-    payload = {
-        "prompt": f"Generate concise codes or labels for this fragment: {doc_fragment}",
-        "max_tokens": 50  # Limit to concise responses
-    }
-    response = api_call('/api/chat/completions', payload)
-    
-    if response:
-        return response['choices'][0]['text'].splitlines()
-    return []
+    prompt = f"Generate concise tags or labels for this text fragment: {doc_fragment}"
+    max_tokens = 3 # maybe 
+    tags = get_chat_completion(token, prompt)
+    print(f"s2a generated tags for {doc_fragment}: tags:\n\n {tags}")
+    return tags
 
-
-
-def s2_attach_codes(doc_fragments:list):
+def s2_attach_tags(token:str, doc_fragments:list):
     """
     Iterate over the sent document fragments. 
-    generate codes for each fragment
-    each time a code is generated, check similarity to pre-existing codes
-    and reject the new code if it is excessively similar to existing codes
+    generate tags for each fragment
+    each time a code is generated, check similarity to pre-existing tags
+    and reject the new code if it is excessively similar to existing tags
     """
-    codes_to_embs = {}
-    frags_to_codes = {}
+    tags_to_embs = {}
+    frags_to_tags = {}
     for frag in doc_fragments:
-        new_codes = s2a_generate_codes(frag)
-        # this will return the codes from new_codes 
-        # that are not excessively similar to existing codes
-        # and replace the very similar ones with existing ones from existing_codes
-        filtered_codes = s2b_filter_codes(new_codes, codes_to_embs)
-        # compute embeddings for filtered_codes and add to existing_codes
-        for code in filtered_codes:
-            emb = str_to_embs(code)
-            codes_to_embs[code] = emb
-        # attach codes to this document
+        new_tags = s2a_generate_tags(token, frag)
+        # this will return the tags from new_tags 
+        # that are not excessively similar to existing tags
+        # and replace the very similar ones with existing ones from existing_tags
+        filtered_tags = s2b_filter_tags(new_tags, tags_to_embs)
+        # compute embeddings for filtered_tags and add to existing_tags
+        for code in filtered_tags:
+            emb = get_ollama_embs(code)
+            tags_to_embs[code] = emb
+        # attach tags to this document
         frag_key = str_to_hash(frag)
-        assert frag_key not in frags_to_codes.keys(), "Bad key!"
-        frags_to_codes[frag_key] = filtered_codes
+        assert frag_key not in frags_to_tags.keys(), "Bad key!"
+        frags_to_tags[frag_key] = filtered_tags
     
-    return frags_to_codes, codes_to_embs
+    return frags_to_tags, tags_to_embs
 
 
 ## 3: Search for Themes (Pattern Identification)  
-def s3_codes_to_themes(doc_frags:list, frags_to_codes:dict, codes_to_embs:dict):
+def s3_tags_to_themes(doc_frags:list, frags_to_tags:dict, tags_to_embs:dict):
     """
-    get codes_to_embs.keys() which is the complete list of codes
-    cluster the codes based on semantic distance between their embeddings
+    get tags_to_embs.keys() which is the complete list of tags
+    cluster the tags based on semantic distance between their embeddings
     then ask the LLM to come up with a descriptive theme title for each cluster 
     """
-    # this will map theme descriptions to lists of codes
-    themes_to_codes = {}
+    # this will map theme descriptions to lists of tags
+    themes_to_tags = {}
 
     pass
 
@@ -253,21 +275,18 @@ if __name__ == "__main__":
     file_list = get_files_in_folder(folder)
     knowledge_name = "my_docs"
     token = "sk-43130b6612624d6aaaecb5fa980fda0c"
+    tags = s2a_generate_tags(token, "I really like the sunshine but I am not keen on the rain")
+    # embs = get_ollama_embs(token, "This is a test")
+    # print(embs)
 
-    knowledge_id, file_ids = s0_load_docs_to_knowledge(file_list=file_list, knowledge_name=knowledge_name, token=token)
-    for fid in file_ids:
-        print(f"Analysing {fid}")
-        text = get_document_contents(token, fid)
-        print(text[0:10])
-        summ = s1_summarise_document(token, text)
-        print("Got summary")
-        print(summ)
-
-    # s0_load_docs_to_datastore(file_list, datastore_name, 'sk-43130b6612624d6aaaecb5fa980fda0c')
-    # doc_strings = get_all_docs_as_strings_from_datastore(datastore_name)
-    # summaries = s1_summarise_document(doc_strings)
-    # frags = get_all_doc_frags_from_datastore(datastore_name)
-    # frags_to_codes, codes_to_embs = s2_attach_codes(frags)
-    # themes = s3_codes_to_themes(frags, frags_to_codes, codes_to_embs)
+    # knowledge_id, file_ids = s0_load_docs_to_knowledge(file_list=file_list, knowledge_name=knowledge_name, token=token)
+    # for fid in file_ids:
+    #     print(f"Analysing {fid}")
+    #     text = get_document_contents(token, fid)
+    #     print(text[0:10])
+    #     summ = s1_summarise_document(token, text[0:200])
+    #     print(f"Got summary {summ}")
+    #     tags = s2_attach_tags(token, summ)
+        
 
 
