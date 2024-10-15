@@ -250,15 +250,18 @@ if __name__ == "__main__":
     folder = sys.argv[1]
     assert os.path.exists(folder), f"Imput Folder not found {folder}"
 
+    # token = "sk-43130b6612624d6aaaecb5fa980fda0c"
+    token = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac one
+
     file_list = get_files_in_folder(folder)
     knowledge_name = "my_docs"
-    token = "sk-43130b6612624d6aaaecb5fa980fda0c"
 
     knowledge_id, file_ids = s0_load_docs_to_knowledge(file_list=file_list, knowledge_name=knowledge_name, token=token)
+    
     for fid in file_ids:
         print(f"Analysing {fid}")
         text = get_document_contents(token, fid)
-        print(text[0:10])
+        print(f"First 20 chars of doc {text[0:20]}")
         summ = s1_summarise_document(token, text)
         print("Got summary")
         print(summ)
