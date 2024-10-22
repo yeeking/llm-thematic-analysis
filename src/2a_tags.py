@@ -28,16 +28,20 @@ if __name__ == "__main__":
     print(f"Proceeding with collection {collection_name} id {collection_id}, writing to file {jfile}")
     docs = ta_utils.get_docs_in_collection(collection_id)
     assert len(docs) > 0, f"Collection does not contain any docs"
+    all_tags = {}
+
     for doc_id in docs:
         print(f"Fragging and tagging doc {doc_id}")
         doc_text = ta_utils.get_doc_contents(doc_id)
         print(f"Got text of len {len(doc_text)}")
-        all_tags = {}
-        frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
+        # frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
+        frags = ta_utils.split_text_semantic(doc_text)
         # tag the fragments 
         print(f"Frag count for doc: {len(frags)}")
+        f_ind = 0
         for frag in frags:
-            print(f"***Getting tags for \n\n{frag} \n\n")
+            print(f"Getting tags for frag {f_ind} of {len(frags)}")
+            # print(f"***Getting tags for \n\n{frag} \n\n")
             tags = ta_utils.generate_tags(frag)
             # add tags to all tags, avoiding repeated tags
             print(f"***Got tags\n\n{tags}")
@@ -46,7 +50,8 @@ if __name__ == "__main__":
                 if t not in all_tags.keys():
                     all_tags[t] = []
                 all_tags[t].append(frag)
-            break
+            f_ind = f_ind + 1
+            # break
         break
     # now we have our first phase tags.
     # write to a mega json file (or ideally do something better ... )

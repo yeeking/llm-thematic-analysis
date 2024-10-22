@@ -1,5 +1,7 @@
 import sys
 import os 
+from nltk.tokenize import TextTilingTokenizer
+
 
 import ta_utils
 
@@ -35,8 +37,23 @@ def test_frag():
         assert len(f) == 5, f"frag not 5 steps"
     print(frags)
 
+def test_semantic_frag():
+    tt_tokenizer = TextTilingTokenizer()
+
+    coll_name = "test_coll"
+    collection_id = ta_utils.get_collection_id(coll_name)
+    doc_ids= ta_utils.get_docs_in_collection(collection_id)
+    for d_id in doc_ids:
+        print(f"Doing doing {d_id}")
+        doc = ta_utils.get_doc_contents(d_id)
+        segments = tt_tokenizer.tokenize(doc)
+        print(f"Got {len(segments)} segs")
+        # for i, segment in enumerate(segments):
+            # print(f"\n\n\n***Segment {i+1}:\n{segment}\n")
+
+
 ## Import the documents to a collection
 if __name__ == "__main__":
-    test_frag()
+    test_semantic_frag()
 
 

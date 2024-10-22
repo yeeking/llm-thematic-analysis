@@ -1,5 +1,8 @@
 import requests 
 import os 
+import json
+from nltk.tokenize import TextTilingTokenizer
+
 
 ## utiltiy functions for thematic analysis
 
@@ -192,6 +195,14 @@ def get_text_summary(text:str):
     summary = get_chat_completion(text)
     return summary
 
+def split_text_semantic(text:str):
+    tt_tokenizer = TextTilingTokenizer()
+    segments = tt_tokenizer.tokenize(text)
+    return segments
+
+
+
+
 def split_text(text:str, frag_length:int, hop_size:int):
     """
     split the sent text into chunks of the sent length with the sent overlap 
@@ -214,4 +225,23 @@ def generate_tags(text:str):
     prompt = f"The following text is a an extract from a conversation. I would like you to generate some tags which describe the text. Here is the text: \"{text}\". Please now go ahead and generate the tags. The tags can have one, two or three words and would be most useful if they describe the text and also identify the sentiment or emotional content of the text. For example: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
 
     tags = get_chat_completion(prompt)
+
+    # now ask it to format it as json
+    prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictioary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
+    tags_raw = get_chat_completion(prompt)
+    print(f"\n\n***Raw tag data: {tags_raw}")
+    # now try for a rough parsing of the data into JSON
+    try:
+        # tags = tags_raw.split("```")
+        # tags = tags[1]
+        tags = json.loads(tags_raw)
+        if (type(tags) is dict) and ('tags' in tags.keys()):
+            tags = tags["tags"]
+        if (type(tags) is dict) and ('tag' in tags.keys()):
+            tags = tags["tag"]
+        if type(tags) == dict:# failure
+            tags = []
+        
+    except: # fail condition is a bit harsh but...
+        print(f"Could not parse these tags: \"{tags_raw}\"")
     return tags
