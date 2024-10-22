@@ -13,19 +13,6 @@ import requests
 
 BASE_URL = "http://localhost:5000"  # Replace with your Open WebUI instance URL
 
-def api_call(endpoint: str, payload: dict):
-    url = f"{BASE_URL}{endpoint}"
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    
-    if response.status_code == 200:
-        return response.json()  # Parse JSON response
-    else:
-        print(f"Error: {response.status_code}, {response.text}")
-        return None
-
 
 def str_to_hash(input:str):
     """
@@ -153,17 +140,18 @@ def get_document_contents(token, file_id):
 
     return response.json()["content"]
 
-def get_chat_completion(token:str, prompt:str, max_tokens=100):
+def get_chat_completion(token:str, prompt:str, model="llama3.2:latest", max_tokens=100):
     """
     generic function to do a chat completion
     """
+    
     url = f'http://localhost:8080/api/chat/completions'
     headers = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
     data = {
-      "model": "llama3.2:latest",
+      "model": model,
       "messages": [
         {
           "role": "user",
@@ -173,16 +161,21 @@ def get_chat_completion(token:str, prompt:str, max_tokens=100):
     }
     response = requests.post(url, headers=headers, json=data)
     data = response.json()
-    text = data["choices"][0]["message"]["content"]
-    return text
+    if "detail" in data.keys(): # generally means you do not have the model
+        print(f"get_chat_completion::WARNING... Looks like you requested a bad model - {data}")
+        return 
+    if "choices" in data.keys(): # looks good...         
+        text = data["choices"][0]["message"]["content"]
+        return text 
+    return 
 
-def s1_summarise_document(token:str, docstring: str):
+def s1_summarise_document(token:str, docstring: str, model: str):
     """
     Familiarising ourselves with the data...
 `   instruct the LLM to generate a summary of the sent document
     """
     prompt = f"Please generate a summary of the following document\n\n{docstring}"
-    result = get_chat_completion(token, prompt)
+    result = get_chat_completion(token, prompt, model=model)
     return result     
     
 
@@ -209,15 +202,15 @@ def s2b_filter_tags(new_tags: list, existing_code_embs: dict, similarity_thresho
             filtered_tags.append(code)
     return filtered_tags
 
-def s2a_generate_tags(token:str, doc_fragment: str):
+def s2a_generate_tags(token:str, doc_fragment: str, model:str):
     """
     Generate new tags for the sent document fragment
     Return generated tags
     """
-    prompt = f"Generate concise tags or labels for this text fragment: {doc_fragment}"
+    prompt = f"Generate concise tags or labels for this text fragment: {doc_fragment}. That is the end of the text fragment. Please only output the bullet point list. "
     max_tokens = 3 # maybe 
-    tags = get_chat_completion(token, prompt)
-    print(f"s2a generated tags for {doc_fragment}: tags:\n\n {tags}")
+    tags = get_chat_completion(token, prompt, model)
+    # print(f"s2a generated tags for {doc_fragment}: tags:\n\n {tags}")
     return tags
 
 def s2_attach_tags(token:str, doc_fragments:list):
@@ -272,21 +265,27 @@ if __name__ == "__main__":
     folder = sys.argv[1]
     assert os.path.exists(folder), f"Imput Folder not found {folder}"
 
+    # token = "sk-43130b6612624d6aaaecb5fa980fda0c"
+    token = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac one
+
     file_list = get_files_in_folder(folder)
     knowledge_name = "my_docs"
-    token = "sk-43130b6612624d6aaaecb5fa980fda0c"
-    tags = s2a_generate_tags(token, "I really like the sunshine but I am not keen on the rain")
-    # embs = get_ollama_embs(token, "This is a test")
-    # print(embs)
 
-    # knowledge_id, file_ids = s0_load_docs_to_knowledge(file_list=file_list, knowledge_name=knowledge_name, token=token)
-    # for fid in file_ids:
-    #     print(f"Analysing {fid}")
-    #     text = get_document_contents(token, fid)
-    #     print(text[0:10])
-    #     summ = s1_summarise_document(token, text[0:200])
-    #     print(f"Got summary {summ}")
-    #     tags = s2_attach_tags(token, summ)
-        
+    knowledge_id, file_ids = s0_load_docs_to_knowledge(file_list=file_list, knowledge_name=knowledge_name, token=token)    
+    for fid in file_ids:
+        print(f"Analysing {fid}")
+        text = get_document_contents(token, fid)
+        # print(f"First 20 chars of doc {text[0:20]}")
+        tags = s2a_generate_tags(token, text[100:200], model="llama3.1:70b")
+        print(f"{tags}")
+        # summ = s1_summarise_document(token, text[0:100], model="llama3.170b")
+        # print("Got summary")
+        # print(summ)
 
+    # s0_load_docs_to_datastore(file_list, datastore_name, 'sk-43130b6612624d6aaaecb5fa980fda0c')
+    # doc_strings = get_all_docs_as_strings_from_datastore(datastore_name)
+    # summaries = s1_summarise_document(doc_strings)
+    # frags = get_all_doc_frags_from_datastore(datastore_name)
+    # frags_to_codes, codes_to_embs = s2_attach_codes(frags)
+    # themes = s3_codes_to_themes(frags, frags_to_codes, codes_to_embs)
 
