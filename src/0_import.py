@@ -14,13 +14,22 @@ if __name__ == "__main__":
     file_list = ta_utils.get_files_in_folder(folder, extension)
     assert len(file_list) > 0, f"Folder {folder} does not contain any {extension} files"
     print(f"Found {len(file_list)} files. Creating collection first")
+
     # now create the collection
-    collection_id = ta_utils.create_collection(collection_name)
+    # does it already exist
+    collection_id = ta_utils.get_collection_id(collection_name)
+    
+    if collection_id == None:
+        collection_id = ta_utils.create_collection(collection_name)
     
     assert collection_id != "", f"Collection id looks bad. Got: '{collection_id}'"
 
     print(f"Got collection id {collection_id}")
+    # assert False # kill it 
+
     for f in file_list:
         print(f"Inserting {f} to {collection_id}")
         assert os.path.exists(f), f"Error: cannot find file {f}"
-        ta_utils.add_doc_to_collection(collection_id, f)
+        # ta_utils.add_doc_to_collection(collection_id, f)
+
+    print(f"Added {len(file_list)} docs to collection {collection_id}")

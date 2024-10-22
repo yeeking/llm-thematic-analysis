@@ -3,12 +3,30 @@ import os
 
 ## utiltiy functions for thematic analysis
 
+# based on live api docs: 
+
+# Main	http://127.0.0.1:8080/docs
+# WebUI	http://127.0.0.1:8080/api/v1/docs
+# Ollama	http://127.0.0.1:8080/ollama/docs
+# OpenAI	http://127.0.0.1:8080/openai/docs
+# Images	http://127.0.0.1:8080/images/api/v1/docs
+# Audio	http://127.0.0.1:8080/audio/api/v1/docs
+# RAG	http://127.0.0.1:8080/retrieval/api/v1/docs
+
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
-API_TOKEN = "123"
-BASE_URL = "http://localhost:8080/" # Replace with your Open WebUI instance URL
+API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c"
+BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
+
+def get_api_headers():
+    global API_TOKEN
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    return headers 
 
 def get_files_in_folder(folder: str, extension: str):
     """
@@ -22,12 +40,9 @@ def get_chat_completion(prompt:str, max_tokens=100):
     """
     generic function to do a chat completion
     """
-    global API_TOKEN, BASE_URL
+    global BASE_URL
     url = f'{BASE_URL}/api/chat/completions'
-    headers = {
-        'Authorization': f'Bearer {API_TOKEN}',
-        'Content-Type': 'application/json'
-    }
+    headers = get_api_headers()
     data = {
       "model": "llama3.2:latest",
       "messages": [
@@ -39,6 +54,8 @@ def get_chat_completion(prompt:str, max_tokens=100):
     }
     response = requests.post(url, headers=headers, json=data)
     data = response.json()
+    assert "detail" not in data.keys(), f"Response bad: {data['detail']}"
+
     text = data["choices"][0]["message"]["content"]
     return text
 
@@ -50,13 +67,45 @@ def list_collections():
     doc_collections = []
     return doc_collections
 
-def does_collection_name_exist(name:str):
+def get_collection_id(name:str):
     """
     check if a collection exists.
+    http://127.0.0.1:8080/api/v1/docs#/
     @return True or False
     """
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge'
+    headers = get_api_headers()
+    response = requests.get(url, headers=headers)
+    k_list = response.json()
+    collection_id = None
+    for k in k_list:
+        if k["name"] == name:
+            collection_id = k["id"]
+            break
+    return collection_id
     
-    return False
+def delete_collection(collection_id:str):
+    """
+    delete the collection and the docs for the sent id 
+    /knowledge/{id}/delete
+    """
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge/{collection_id}/delete'
+    headers = get_api_headers()
+    response = requests.delete(url, headers=headers)
+    response = response.json()
+    print(response)
+
+def delete_collections_with_name(collection_name:str):
+    """
+    CAREFUL... deletes all collections with the sent name 
+    """
+    collection_id = 0
+    while collection_id != None:
+        collection_id = ta_utils.get_collection_id(coll_name)
+        print("deleting ", collection_id)
+        delete_collection(collection_id)
 
 def does_collection_id_exist(id:str):
     """
@@ -66,13 +115,24 @@ def does_collection_id_exist(id:str):
     
     return False
 
-def create_collection(name:str):
+def create_collection(collection_name:str):
     """
     create a collection and return its id
     """
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge/create'
+    headers = get_api_headers()
     collection_id = ""
-
-    return collection_id
+    data = {
+        "name": collection_name,
+        "description": "string",
+        "data": {}
+    }
+    response = requests.post(url, headers=headers, json=data)
+    response = response.json()
+    assert "detail" not in response.keys(), f"Response bad: {response['detail']} key: '{API_TOKEN}'"
+    return response 
+    
 
 
 def add_doc_to_collection(collection_id, doc_contents):
@@ -92,7 +152,15 @@ def get_doc_contents(collection_id, doc_id):
     """
     get the doc contents as a string
     """
-    return ""
+    global API_TOKEN, BASE_URL
+    url = f'{BASE_URL}/api/v1/files/{doc_id}/data/content'
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    response = requests.get(url, headers=headers)
+
+    return response.json()["content"]
 
 
 def summarise_text(text:str):
