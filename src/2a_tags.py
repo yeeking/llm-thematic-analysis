@@ -9,46 +9,45 @@ import json
 import os 
 
 
-
-
-
 ## Import the documents to a collection
 if __name__ == "__main__":
-    # note that we do not use the word code when working with llms
-    # as that tends to trigger generation of computer code
-    print("Creating tags for all fragments (aka the codebook)")
-
-    assert len(sys.argv) == 5, f"Usage python script.py collection_id frag_length frag_overlap json_outfile"
-    # id for doc collection in the webui system
-    collection_id = sys.argv[1]
-    # length of fragments 
+    print("Gettting tags from a collection and summarising")
+    assert len(sys.argv) == 5, "Usage: python script.py collection_name frag_len frag_hop json_outfile"
+    print(sys.argv)
+    collection_name = sys.argv[1]
     frag_len = int(sys.argv[2])
-    # frag overlap
-    frag_overlap = int(sys.argv[3])
-    # json output file
+    frag_hop = int(sys.argv[3])
     jfile = sys.argv[4]
-    # assert os.path.exists(json) == False, f"json out file seems to already exist so aborting {jfile} " 
-    # get the docs from the collection
-    assert ta_utils.does_collection_id_exist(collection_id), f"Cannot find a collection with id {collection_id}"
-    doc_ids = ta_utils.get_docs_in_collection(collection_id)
-    all_tags = {} # this will be {"tag_text":["doc_frag1", "doc_frag2"]} etc.
-    # iterate over docs
-    for doc_id in doc_ids:
-        print(f"Processing {doc_id}")
-        # get doc content
-        doc_str = ta_utils.get_doc_contents(collection_id, doc_id)
-        # split the doc to fragments
-        frags = ta_utils.split_text(doc_str, frag_len, frag_overlap)
+    # do a quick test on the file
+    with open(jfile, 'w') as f:
+        f.write("")
+    assert os.path.exists(jfile), f"Cannot write to file {jfile}"
+    
+    collection_id = ta_utils.get_collection_id(collection_name)
+    assert collection_id != None, f"Collection not found: {collection_name}"
+    print(f"Proceeding with collection {collection_name} id {collection_id}, writing to file {jfile}")
+    docs = ta_utils.get_docs_in_collection(collection_id)
+    assert len(docs) > 0, f"Collection does not contain any docs"
+    for doc_id in docs:
+        print(f"Fragging and tagging doc {doc_id}")
+        doc_text = ta_utils.get_doc_contents(doc_id)
+        print(f"Got text of len {len(doc_text)}")
+        all_tags = {}
+        frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
         # tag the fragments 
         print(f"Frag count for doc: {len(frags)}")
         for frag in frags:
+            print(f"***Getting tags for \n\n{frag} \n\n")
             tags = ta_utils.generate_tags(frag)
             # add tags to all tags, avoiding repeated tags
+            print(f"***Got tags\n\n{tags}")
             print(f"Tag count for frag {len(tags)}")
             for t in tags:
                 if t not in all_tags.keys():
                     all_tags[t] = []
                 all_tags[t].append(frag)
+            break
+        break
     # now we have our first phase tags.
     # write to a mega json file (or ideally do something better ... )
     j_data = json.dumps(all_tags)

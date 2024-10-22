@@ -103,17 +103,9 @@ def delete_collections_with_name(collection_name:str):
     """
     collection_id = 0
     while collection_id != None:
-        collection_id = ta_utils.get_collection_id(coll_name)
+        collection_id = get_collection_id(collection_name)
         print("deleting ", collection_id)
         delete_collection(collection_id)
-
-def does_collection_id_exist(id:str):
-    """
-    check if a collection exists.
-    @return True or False
-    """
-    
-    return False
 
 def create_collection(collection_name:str):
     """
@@ -131,14 +123,39 @@ def create_collection(collection_name:str):
     response = requests.post(url, headers=headers, json=data)
     response = response.json()
     assert "detail" not in response.keys(), f"Response bad: {response['detail']} key: '{API_TOKEN}'"
-    return response 
+    return response["id"] 
     
-
-
-def add_doc_to_collection(collection_id, doc_contents):
+def add_doc_to_db(file_path):
     """
-    create a doc in the sent collection and return its id
+    create a file in the database from a local file
+    you need to do this before you can add it to a collection
+    returns a file_id
     """
+    global API_TOKEN, BASE_URL
+    url = f'{BASE_URL}/api/v1/files/'
+    # different headers for this one as we are posting binary data
+    headers = {
+        'Authorization': f'Bearer {API_TOKEN}',
+        'Accept': 'application/json'
+    }
+    print(headers)
+    files = {'file': open(file_path, 'rb')}
+    response = requests.post(url, headers=headers, files=files)
+    response = response.json()
+    assert "detail" not in response.keys(), f"File add failed for some reason {response}"
+    file_id = response["id"]
+    return file_id
+
+def add_doc_to_collection(file_id, collection_id):
+    """
+    add a doc to the sent collection and return its id
+    """
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge/{collection_id}/file/add'
+    headers = get_api_headers()
+    data = {'file_id': file_id}
+    response = requests.post(url, headers=headers, json=data)
+    return response.json()
     doc_id = ""
     return doc_id
 
@@ -146,38 +163,55 @@ def get_docs_in_collection(collection_id:str):
     """
     get a list of doc ids from the sent collection id
     """
-    return []
-
-def get_doc_contents(collection_id, doc_id):
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge/{collection_id}'
+    headers = get_api_headers()
+    response = requests.get(url, headers=headers)
+    response = response.json()
+    assert "detail" not in response.keys(), f"Response bad: {response['detail']}"
+    assert ("data" in response.keys()) and ("file_ids" in response["data"].keys()), f"Collection data has no files"
+    return response["data"]["file_ids"]
+    
+def get_doc_contents(doc_id):
     """
     get the doc contents as a string
     """
     global API_TOKEN, BASE_URL
     url = f'{BASE_URL}/api/v1/files/{doc_id}/data/content'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
+    headers = get_api_headers()
     response = requests.get(url, headers=headers)
+    response = response.json()
+    assert "content" in response.keys(), f"No content in doc {doc_id}"
+    return response["content"]
 
-    return response.json()["content"]
-
-
-def summarise_text(text:str):
+def get_text_summary(text:str):
     """
     return a summary of the sent doc
     """
-    return ""
+    prompt = f"Please summarise the following text in a single paragraph with bullet points {text}"
+    summary = get_chat_completion(text)
+    return summary
 
-def split_text(text:str, length:int, overlap:int):
+def split_text(text:str, frag_length:int, hop_size:int):
     """
     split the sent text into chunks of the sent length with the sent overlap 
     might want to use the webui api to do this or to pull frags out of the collection
     """
-    return []
+    frags = []
+    start = 0
+    end = start + frag_length
+    while end < len(text):
+        frags.append(text[start:end])
+        start = end + hop_size
+        end = start + frag_length
+        
+    return frags
 
 def generate_tags(text:str):
     """
     generate a list of tags for the sent text
     """
-    return []
+    prompt = f"The following text is a an extract from a conversation. I would like you to generate some tags which describe the text. Here is the text: \"{text}\". Please now go ahead and generate the tags. The tags can have one, two or three words and would be most useful if they describe the text and also identify the sentiment or emotional content of the text. For example: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
+
+    tags = get_chat_completion(prompt)
+    return tags
