@@ -52,11 +52,12 @@ if __name__ == "__main__":
                 all_tags[t].append(frag)
             f_ind = f_ind + 1
             # break
-        break
+            j_data = json.dumps(all_tags)
+            print(f"Writing results to {jfile}")
+            with open(jfile, 'w') as f:
+                f.write(j_data)
+        # break
     # now we have our first phase tags.
     # write to a mega json file (or ideally do something better ... )
-    j_data = json.dumps(all_tags)
-    print(f"Writing results to {jfile}")
-    with open(jfile, 'w') as f:
-        f.write(j_data)
+ 
     

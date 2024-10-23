@@ -2,7 +2,7 @@ import requests
 import os 
 import json
 from nltk.tokenize import TextTilingTokenizer
-
+import ast 
 
 ## utiltiy functions for thematic analysis
 
@@ -47,7 +47,8 @@ def get_chat_completion(prompt:str, max_tokens=100):
     url = f'{BASE_URL}/api/chat/completions'
     headers = get_api_headers()
     data = {
-      "model": "llama3.2:latest",
+    #   "model": "llama3.2:latest",
+      "model":"llama3.1:8b", 
       "messages": [
         {
           "role": "user",
@@ -218,11 +219,11 @@ def split_text(text:str, frag_length:int, hop_size:int):
         
     return frags
 
-def generate_tags(text:str):
+def generate_tags(text:str, bad_tags_file='bad_tags.txt'):
     """
     generate a list of tags for the sent text
     """
-    prompt = f"The following text is a an extract from a conversation. I would like you to generate some tags which describe the text. Here is the text: \"{text}\". Please now go ahead and generate the tags. The tags can have one, two or three words and would be most useful if they describe the text and also identify the sentiment or emotional content of the text. For example: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
+    prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate some tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
 
     tags = get_chat_completion(prompt)
 
@@ -232,16 +233,15 @@ def generate_tags(text:str):
     print(f"\n\n***Raw tag data: {tags_raw}")
     # now try for a rough parsing of the data into JSON
     try:
-        # tags = tags_raw.split("```")
-        # tags = tags[1]
-        tags = json.loads(tags_raw)
-        if (type(tags) is dict) and ('tags' in tags.keys()):
-            tags = tags["tags"]
-        if (type(tags) is dict) and ('tag' in tags.keys()):
-            tags = tags["tag"]
-        if type(tags) == dict:# failure
+        tags = ast.literal_eval(tags_raw)
+        # tags = json.loads(tags_raw)
+        if type(tags) is not list:
             tags = []
         
     except: # fail condition is a bit harsh but...
         print(f"Could not parse these tags: \"{tags_raw}\"")
+        tags = []
+    if tags == []:
+        with open(bad_tags_file, 'a') as f:
+            f.write("\n\n"+tags_raw+"\n\n")
     return tags
