@@ -8,7 +8,6 @@ import ta_utils
 import json
 import os 
 
-
 def doc_to_frags(doc_id:str):
     """
     load the sent doc_id from the server, get contents and fragment it
