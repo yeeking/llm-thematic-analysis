@@ -9,6 +9,37 @@ import json
 import os 
 
 
+def doc_to_frags(doc_id:str):
+    """
+    load the sent doc_id from the server, get contents and fragment it
+    """
+    print(f"Fragging and tagging doc {doc_id}")
+    doc_text = ta_utils.get_doc_contents(doc_id)
+    print(f"Got text of len {len(doc_text)}")
+    # frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
+    frags = ta_utils.split_text_semantic(doc_text)
+    # tag the fragments 
+    print(f"Frag count for doc: {len(frags)}")
+    return frags
+
+def frags_to_tags(frags:list, all_tags:dict):
+    """
+    process the sent list of frags by extracting tags and storing them 
+    into all_tags
+    """
+    f_ind = 0
+    for frag in frags:
+        print(f"Getting tags for frag {f_ind} of {len(frags)}")
+        # print(f"***Getting tags for \n\n{frag} \n\n")
+        tags = ta_utils.generate_tags(frag)
+        # add tags to all tags, avoiding repeated tags
+        print(f"Tag count for frag {len(tags)}")
+        for t in tags:
+            if t not in all_tags.keys():
+                all_tags[t] = []
+            all_tags[t].append(frag)
+        f_ind = f_ind + 1
+
 ## Import the documents to a collection
 if __name__ == "__main__":
     print("Gettting tags from a collection and summarising")
@@ -31,33 +62,10 @@ if __name__ == "__main__":
     all_tags = {}
 
     for doc_id in docs:
-        print(f"Fragging and tagging doc {doc_id}")
-        doc_text = ta_utils.get_doc_contents(doc_id)
-        print(f"Got text of len {len(doc_text)}")
-        # frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
-        frags = ta_utils.split_text_semantic(doc_text)
-        # tag the fragments 
-        print(f"Frag count for doc: {len(frags)}")
-        f_ind = 0
-        for frag in frags:
-            print(f"Getting tags for frag {f_ind} of {len(frags)}")
-            # print(f"***Getting tags for \n\n{frag} \n\n")
-            tags = ta_utils.generate_tags(frag)
-            # add tags to all tags, avoiding repeated tags
-            print(f"***Got tags\n\n{tags}")
-            print(f"Tag count for frag {len(tags)}")
-            for t in tags:
-                if t not in all_tags.keys():
-                    all_tags[t] = []
-                all_tags[t].append(frag)
-            f_ind = f_ind + 1
-            # break
-            j_data = json.dumps(all_tags)
-            print(f"Writing results to {jfile}")
-            with open(jfile, 'w') as f:
-                f.write(j_data)
-        # break
-    # now we have our first phase tags.
-    # write to a mega json file (or ideally do something better ... )
- 
+        frags = doc_to_frags(doc_id) 
+        frags_to_tags(frags, all_tags)
+        j_data = json.dumps(all_tags)
+        with open(jfile, 'w') as f:
+            f.write(j_data)
+
     
