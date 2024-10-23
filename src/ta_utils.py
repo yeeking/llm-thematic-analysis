@@ -19,7 +19,9 @@ import ast
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
-API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c"
+API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
+API_TOKEN = "sk-7f60c0813c8f4f3ba5aa9db99365de97" # wispa
+ 
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
 
@@ -48,7 +50,7 @@ def get_chat_completion(prompt:str, max_tokens=100):
     headers = get_api_headers()
     data = {
     #   "model": "llama3.2:latest",
-      "model":"llama3.1:8b", 
+      "model":"llama3.1:latest", 
       "messages": [
         {
           "role": "user",
