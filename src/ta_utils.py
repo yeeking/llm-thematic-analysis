@@ -3,6 +3,10 @@ import os
 import json
 from nltk.tokenize import TextTilingTokenizer
 import ast 
+import ollama
+import numpy as np
+
+
 
 ## utiltiy functions for thematic analysis
 
@@ -20,7 +24,7 @@ import ast
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
 API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-API_TOKEN = "sk-7f60c0813c8f4f3ba5aa9db99365de97" # wispa
+API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895"
  
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
@@ -49,8 +53,9 @@ def get_chat_completion(prompt:str, max_tokens=100):
     url = f'{BASE_URL}/api/chat/completions'
     headers = get_api_headers()
     data = {
-    #   "model": "llama3.2:latest",
-      "model":"llama3.1:latest", 
+      "model": "llama3.2:latest",
+    # "model":"llama3.1:70b", 
+    #   "model":"llama3.1:latest", 
       "messages": [
         {
           "role": "user",
@@ -247,3 +252,28 @@ def generate_tags(text:str, bad_tags_file='bad_tags.txt'):
         with open(bad_tags_file, 'a') as f:
             f.write("\n\n"+tags_raw+"\n\n")
     return tags
+
+
+def text_to_embeddings(text):
+    """
+    generate an embedding for the sent text 
+    """
+    response = ollama.embeddings(model="mxbai-embed-large", prompt=text, keep_alive=1)
+    embedding = response["embedding"]
+    return embedding
+
+def get_z_scores(values):
+    """
+    computes the z-scores for the sent values
+    which are the values - mean_value / std_dev_value
+    """
+    values = np.array(values)
+    # Step 1: Calculate the mean and standard deviation of cosine distances
+    mean_value = np.mean(values)
+    std_dev_value = np.std(values)
+    # print(values)
+    # print(mean_value, std_dev_value)
+
+    # Step 2: Calculate z-scores for each cosine distance
+    z_scores = (values - mean_value) / std_dev_value
+    return z_scores 

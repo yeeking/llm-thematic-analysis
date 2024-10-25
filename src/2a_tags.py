@@ -21,7 +21,7 @@ def doc_to_frags(doc_id:str):
     print(f"Frag count for doc: {len(frags)}")
     return frags
 
-def frags_to_tags(frags:list, all_tags:dict):
+def frags_to_tags(frags:list, all_tags:dict, save_mode:bool, jfile:str):
     """
     process the sent list of frags by extracting tags and storing them 
     into all_tags
@@ -38,6 +38,10 @@ def frags_to_tags(frags:list, all_tags:dict):
                 all_tags[t] = []
             all_tags[t].append(frag)
         f_ind = f_ind + 1
+        if save_mode:
+            j_data = json.dumps(all_tags)
+            with open(jfile, 'w') as f:
+                f.write(j_data)
 
 ## Import the documents to a collection
 if __name__ == "__main__":
@@ -62,9 +66,7 @@ if __name__ == "__main__":
 
     for doc_id in docs:
         frags = doc_to_frags(doc_id) 
-        frags_to_tags(frags, all_tags)
-        j_data = json.dumps(all_tags)
-        with open(jfile, 'w') as f:
-            f.write(j_data)
+        frags_to_tags(frags, all_tags, save_mode=True, jfile=jfile)
+      
 
     
