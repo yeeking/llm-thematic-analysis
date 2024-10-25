@@ -161,7 +161,7 @@ if __name__ == "__main__":
         j_in_str = f.read()
     tags_to_quotes = json.loads(j_in_str)
     tags_to_quotes = merge_tags_on_case(tags_to_quotes)
-    tag_list = [t for t in tags_to_quotes.keys()][1:5]
+    tag_list = [t for t in tags_to_quotes.keys()]#[1:5]
 
     if os.path.exists(json_tag_z_score_file):
         print("Z scores already computed. Skipping calculation")
@@ -177,6 +177,7 @@ if __name__ == "__main__":
         # the codebook can be a CSV 
         print("computing tag distances")
         tag_descs = [tags_to_embs_and_descs[t]["description"] for t in tags_to_embs_and_descs]
+        print(f"writing codebook to {codebook_csv_file} ")
         codebook_df = pd.DataFrame({"tag":tag_list, "description":tag_descs})
         codebook_df.to_csv(codebook_csv_file)
         # now throw away the descrptions
@@ -186,6 +187,7 @@ if __name__ == "__main__":
         tag_dists = compute_tag_distances(tag_list, tags_to_embs)
         tag_z_scores = compute_z_scores(tag_dists)
         # dump z scores so can human sanity check em 
+        print(f"Writing z scores to {json_tag_z_score_file}")
         jdata = json.dumps(tag_z_scores)
         with open(json_tag_z_score_file, 'w') as f:
             f.write(jdata)
@@ -205,6 +207,15 @@ if __name__ == "__main__":
     # which will combine the quotes for similar tags under single tag
     refined_tags = semantic_tag_merge(tag_z_scores=tag_z_scores_clean, 
                                       tags_and_quotes=tags_to_quotes, 
-                                      z_score_threshold=-4)
+                                      z_score_threshold=-4.6)
+    # now write the refined tags to disk
+    print(f"Writing merged tags to {json_merged_tag_file}")
 
+    print(f"Got merged tags. Tag count: {len(refined_tags.keys())}")
+    for t in refined_tags.keys():
+        print(f"{t} has {len(refined_tags[t])} quotes")
+    
+    json_str = json.dumps(refined_tags)
+    with open(json_merged_tag_file, 'w') as f:
+        f.write(json_str)
     
