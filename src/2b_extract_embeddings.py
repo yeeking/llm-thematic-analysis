@@ -26,7 +26,7 @@ def compute_tag_embeddings_via_description(tag_list:list):
     t_to_embs = {}
     for i,t in enumerate(tag_list):
         print(f"Getting embs for {i} of {len(tag_list)}")
-        prompt = f"Please write a description of what you think the following tag is about. Just provide the description please, not your justification of that description. Here is the tag: '{t}'"
+        prompt = f"Please write a description of what you think the following tag is about, given that the tag has been attached to some text from an interview where two people are discussing various topics related to exams in higher education. Tags might refer to the tone of the discussion or the content, or both. Use a neutral tone - just try to guess what the tag relates to. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. Here is the tag: '{t}'"
         description = ta_utils.get_chat_completion(prompt)
         print(f"First, get a description of tag {t}: \n {description}")
         t_to_embs[t] = {"embedding":ta_utils.text_to_embeddings(description), "description":description}
@@ -76,12 +76,14 @@ if __name__ == "__main__":
 
     print(f"Got {len(tag_list)} tags. Computing embeds ")
     # build a semantic distance matrix between all tags
-    tags_to_embs = compute_tag_embeddings(tag_list)
+    # tags_to_embs = compute_tag_embeddings(tag_list)
+    tags_to_embs = compute_tag_embeddings_via_description(tag_list)
     
     # Convert the dictionary to a DataFrame
     df = pd.DataFrame({
         'tag': list(tags_to_embs.keys()),
-        'embeddings': [json.dumps(embedding) for embedding in tags_to_embs.values()]
+        'description': [json.dumps(embedding["description"]) for embedding in tags_to_embs.values()],
+        'embeddings': [json.dumps(embedding["embedding"]) for embedding in tags_to_embs.values()]
     })
 
     # Display the resulting DataFrame
