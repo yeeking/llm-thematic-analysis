@@ -23,8 +23,8 @@ import numpy as np
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
-API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-# API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
+# API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
+API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
 
@@ -44,7 +44,7 @@ def get_files_in_folder(folder: str, extension: str):
             if os.path.isfile(os.path.join(folder, file)) and file.endswith(extension)]
 
 
-def get_chat_completion(prompt:str, max_tokens=100):
+def get_chat_completion(prompt:str, model="llama3.2:latest", max_tokens=100):
     """
     generic function to do a chat completion
     """
@@ -52,7 +52,8 @@ def get_chat_completion(prompt:str, max_tokens=100):
     url = f'{BASE_URL}/api/chat/completions'
     headers = get_api_headers()
     data = {
-      "model": "llama3.2:latest",
+        "model":model, 
+    #   "model": "llama3.2:latest",
     # "model":"llama3.1:70b", 
     #   "model":"llama3.1:latest", 
       "messages": [
@@ -88,6 +89,8 @@ def get_collection_id(name:str):
     headers = get_api_headers()
     response = requests.get(url, headers=headers)
     k_list = response.json()
+    assert type(k_list) is list, f"Expected a list of collections but got {k_list}"
+    # assert "detail" not in k_list.keys(), f"Looks like the request failed : {k_list}"
     collection_id = None
     for k in k_list:
         if k["name"] == name:
@@ -179,7 +182,7 @@ def get_docs_in_collection(collection_id:str):
     response = requests.get(url, headers=headers)
     response = response.json()
     assert "detail" not in response.keys(), f"Response bad: {response['detail']}"
-    assert ("data" in response.keys()) and ("file_ids" in response["data"].keys()), f"Collection data has no files"
+    assert ("data" in response.keys()) and ("file_ids" in response["data"].keys()), f"Collection data has no files. Here's what I got back: {response}"
     return response["data"]["file_ids"]
     
 def get_doc_contents(doc_id):
@@ -225,18 +228,18 @@ def split_text(text:str, frag_length:int, hop_size:int):
         
     return frags
 
-def generate_tags(text:str, bad_tags_file='bad_tags.txt'):
+def generate_tags(text:str, model="llama3.2:latest", bad_tags_file='bad_tags.txt'):
     """
     generate a list of tags for the sent text
     """
-    prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate some tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
+    prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
 
     tags = get_chat_completion(prompt)
 
     # now ask it to format it as json
     prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictioary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
-    tags_raw = get_chat_completion(prompt)
-    print(f"\n\n***Raw tag data: {tags_raw}")
+    tags_raw = get_chat_completion(prompt, model)
+    # print(f"\n\n***Raw tag data: {tags_raw}")
     # now try for a rough parsing of the data into JSON
     try:
         tags = ast.literal_eval(tags_raw)

@@ -29,5 +29,7 @@ if __name__ == "__main__":
         f_id = ta_utils.add_doc_to_db(f) # create it 
         ta_utils.add_doc_to_collection(collection_id=collection_id, file_id=f_id) # put it in the coll
 
-
+    # verify the docs are there
+    docs = ta_utils.get_docs_in_collection(collection_id)
+    assert len(docs) == len(file_list), f"Found {len(docs)} in collection but wanted {len(file_list)}"
     print(f"Added {len(file_list)} docs to collection {collection_id}")
