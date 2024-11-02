@@ -23,8 +23,8 @@ import numpy as np
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
-# API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
+API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
+# API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
 
