@@ -34,25 +34,30 @@ def get_pca_variances(embeddings):
     to explained variance, e.g. x[100] = 0.95 # 100 components explains 95% of variance
     """
     maxn = len(embeddings)
-    pca_components = np.arange(2, maxn, maxn/10) # 10 values from 2 to max components
+    pca_components = np.arange(2, maxn, maxn/100) # 10 values from 2 to max components
     
     # Dictionary to store cumulative explained variance for each component count
     explained_variances = {}
-
+    target = 0.95
     # Loop over each number of components
     for n_components in pca_components:
         print(f"Doing PCA with {n_components}")
         # Apply PCA with n_components
-        pca = PCA(n_components=int(n_components))
+        n_components = int(n_components)
+        pca = PCA(n_components=n_components)
         # print(embeddings)
         pca.fit(embeddings)  # 'embeddings' should be your dataset of vectors
 
         # Calculate cumulative explained variance
         cumulative_variance = np.cumsum(pca.explained_variance_ratio_)[-1]  # Total explained variance for n_components
         explained_variances[n_components] = cumulative_variance
+
+        if cumulative_variance >= target:
+            best_n = n_components
+            break
         print(f"PCA components: {n_components}, Cumulative explained variance: {cumulative_variance:.4f}")
     
-    return explained_variances
+    return explained_variances, n_components
 
 def plot_pca_results(explained_variances:dict, outfile='pca.png'):
     """
@@ -74,12 +79,15 @@ def get_cluster_scores(pca_components, embeddings, cluster_range=[2,4,6,8,10,20]
     returns a dictionary mapping number of clusters -> davies_bouldin and silhouette scores
     """
     # Apply PCA to reduce dimensions
-    pca = PCA(n_components=pca_components)
-    # reduce dimensionality
-    reduced_embeddings = pca.fit_transform(embeddings)
-    # convert for cosine distance
-    normed_embeddings = preprocessing.normalize(reduced_embeddings)
-    
+    if pca_components > 0:
+        pca = PCA(n_components=pca_components)
+        # reduce dimensionality
+        reduced_embeddings = pca.fit_transform(embeddings)
+        # convert for cosine distance
+        normed_embeddings = preprocessing.normalize(reduced_embeddings)
+    else: 
+        normed_embeddings = preprocessing.normalize(embeddings)
+
     # Dictionary to store Davies-Bouldin and Silhouette scores for each k
     results = {}
 
@@ -87,13 +95,13 @@ def get_cluster_scores(pca_components, embeddings, cluster_range=[2,4,6,8,10,20]
     for k in cluster_range:
         # Apply KMeans clustering
         kmeans = KMeans(n_clusters=k, random_state=0)
-        cluster_labels = kmeans.fit_predict(reduced_embeddings)
+        cluster_labels = kmeans.fit_predict(normed_embeddings)
 
         # Calculate Davies-Bouldin Index
-        db_index = davies_bouldin_score(reduced_embeddings, cluster_labels)
+        db_index = davies_bouldin_score(normed_embeddings, cluster_labels)
         
         # Calculate Silhouette Score (only if k > 1)
-        silhouette_avg = silhouette_score(reduced_embeddings, cluster_labels)
+        silhouette_avg = silhouette_score(normed_embeddings, cluster_labels)
         
         
         results[k] = {'davies_bouldin': db_index, 
@@ -104,7 +112,7 @@ def get_cluster_scores(pca_components, embeddings, cluster_range=[2,4,6,8,10,20]
     return results
 
 
-def plot_cluster_scores(k_to_scores:dict, feature, outfile):
+def plot_cluster_scores(k_to_scores:dict, feature, outfile, pca_components):
     
     x_values = list(k_to_scores.keys()) # k is the thing we vary
     y_values = [d[feature] for d in k_to_scores.values()]
@@ -120,7 +128,7 @@ def plot_cluster_scores(k_to_scores:dict, feature, outfile):
 
     plt.xlabel('Number of Clusters (k)')
     plt.ylabel(feature)
-    plt.title(f'{feature} vs Number of Clusters')
+    plt.title(f'{feature} vs Number of Clusters with {pca_components} dim')
     plt.legend()
     plt.grid(True)
     plt.savefig(outfile)
@@ -128,24 +136,28 @@ def plot_cluster_scores(k_to_scores:dict, feature, outfile):
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 2, f"USage: python script.py tags_and_embeddings_csv"
+    assert len(sys.argv) == 3, f"USage: python script.py tags_and_embeddings_csv plot_folder"
 
     csv_file = sys.argv[1]
+    plot_folder = sys.argv[2]
     assert os.path.exists(csv_file)
+    assert os.path.exists(plot_folder)
 
     print(f"Loading data file {csv_file}")
 
     tags_to_enbs = get_tag_to_embeddings(csv_file)
     embeddings = list(tags_to_enbs.values())
-    pca_results = get_pca_variances(embeddings)
-    plot_pca_results(pca_results)
-    cluster_scores = get_cluster_scores(100, embeddings)
+    pca_results, best_n = get_pca_variances(embeddings)
+    plot_pca_results(pca_results, plot_folder + "/pca.png")
+    cluster_scores = get_cluster_scores(best_n, embeddings, cluster_range=range(2, 100))
+    # zero for pca_comps forces it to use the complete embedding vector for clustering 
+    # cluster_scores = get_cluster_scores(0, embeddings, cluster_range=range(2, 100))
     for ind in cluster_scores.keys():
         features = cluster_scores[ind].keys()
         break
     print(f"Found cluster features {features} for ks {cluster_scores.keys()}")
     for f in features:
-        plot_cluster_scores(cluster_scores, f, "clust"+f+".png")
+        plot_cluster_scores(cluster_scores, f, plot_folder + "/clust"+f+".png", best_n)
 
 
 
