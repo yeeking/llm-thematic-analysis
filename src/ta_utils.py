@@ -24,7 +24,8 @@ import numpy as np
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
 # API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
+API_TOKEN = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac-studio
+# API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
 
@@ -263,6 +264,13 @@ def text_to_embeddings(text):
     response = ollama.embeddings(model="mxbai-embed-large", prompt=text, keep_alive=1)
     embedding = response["embedding"]
     return embedding
+
+def compute_tag_embeddings_via_description(tag:str, model):
+    prompt = f"Please write a description of what you think the following tag is about, given that the tag has been attached to some text from an interview where two people are discussing various topics related to exams in higher education. Tags might refer to the tone of the discussion or the content, or both. Use a neutral tone - just try to guess what the tag relates to. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. Here is the tag: '{t}'"
+    description = get_chat_completion(prompt, model)
+    emb = text_to_embeddings(description)
+    return description, emb
+    
 
 def get_z_scores(values):
     """

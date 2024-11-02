@@ -34,13 +34,6 @@ from tqdm import tqdm
 #         t_to_embs[t] = {"embedding":ta_utils.text_to_embeddings(description), "description":description}
 #     return t_to_embs
 
-def compute_tag_embeddings_via_description(tag:str, model):
-    prompt = f"Please write a description of what you think the following tag is about, given that the tag has been attached to some text from an interview where two people are discussing various topics related to exams in higher education. Tags might refer to the tone of the discussion or the content, or both. Use a neutral tone - just try to guess what the tag relates to. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. Here is the tag: '{t}'"
-    description = ta_utils.get_chat_completion(prompt, model)
-    emb = ta_utils.text_to_embeddings(description)
-    return description, emb
-    
-
 
 def merge_tags_on_case(tags_and_quotes:dict):
     """
@@ -71,7 +64,7 @@ if __name__ == "__main__":
     json_naive_tag_file = sys.argv[1] # read this in 
     # json_tag_z_score_file = sys.argv[2] # write this out 
     # json_merged_tag_file = sys.argv[3] # write this out
-    # codebook_csv_file = sys.argv[4] # write this out 
+    codebook_csv_file = sys.argv[4] # write this out 
     
 
     assert os.path.exists(json_naive_tag_file), f"Cannot find tag input file {json_naive_tag_file}"
@@ -97,10 +90,10 @@ if __name__ == "__main__":
         for t in tag_list:
             # generate a description of the tag and compute the embedding of the 
             # description
-            description, embedding = compute_tag_embeddings_via_description(t, model)
+            # description, embedding = compute_tag_embeddings_via_description(t, model)
             # alternative - just use the tag
-            # embedding = ta_utils.text_to_embeddings(t)
-            # description = ""
+            embedding = ta_utils.text_to_embeddings(t)
+            description = ""
 
             tags_to_embs[t] = {"embedding":embedding, "description":description}
             pbar.update(1)  # Update the progress bar by one step
@@ -114,8 +107,8 @@ if __name__ == "__main__":
     })
 
     # Display the resulting DataFrame
-    print(df)
-    df.to_csv('test.csv')
+    print(df.head())
+    df.to_csv(codebook_csv_file)
 
 
         
