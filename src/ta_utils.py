@@ -6,7 +6,14 @@ import ast
 import ollama
 import numpy as np
 import re 
-
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn.metrics import davies_bouldin_score
+from sklearn import preprocessing
+from sklearn.metrics import davies_bouldin_score, silhouette_score
+from sklearn.metrics import calinski_harabasz_score
+import pandas as pd 
 
 ## utiltiy functions for thematic analysis
 
@@ -390,3 +397,106 @@ def get_z_scores(values):
     # Step 2: Calculate z-scores for each cosine distance
     z_scores = (values - mean_value) / std_dev_value
     return z_scores 
+
+def get_tag_to_embeddings(csv_filename, embedding_field="embeddings"):
+    """
+    returns a dictionary mapping tags to mebeddings
+    """
+    data = pd.read_csv(csv_filename)
+    tag_embeddings = {}
+
+    for ind,row in data.iterrows():
+        tag_embeddings[row['tag']] = np.array(json.loads(row[embedding_field]))
+    return tag_embeddings
+    
+
+def get_pca_variances(embeddings):
+    """
+    returns a dictionary mapping number of PCA components
+    to explained variance, e.g. x[100] = 0.95 # 100 components explains 95% of variance
+    """
+    maxn = len(embeddings)
+    pca_components = np.arange(2, maxn, maxn/100) # 10 values from 2 to max components
+    # convert to normalised version which is how we'll run it later
+    embeddings = preprocessing.normalize(embeddings)
+
+    # Dictionary to store cumulative explained variance for each component count
+    explained_variances = {}
+    target = 0.95
+    # Loop over each number of components
+    for n_components in pca_components:
+        print(f"Doing PCA with {n_components}")
+        # Apply PCA with n_components
+        n_components = int(n_components)
+        pca = PCA(n_components=n_components)
+        # print(embeddings)
+        pca.fit(embeddings)  # 'embeddings' should be your dataset of vectors
+
+        # Calculate cumulative explained variance
+        cumulative_variance = np.cumsum(pca.explained_variance_ratio_)[-1]  # Total explained variance for n_components
+        explained_variances[n_components] = cumulative_variance
+
+        if cumulative_variance >= target:
+            best_n = n_components
+            break
+        print(f"PCA components: {n_components}, Cumulative explained variance: {cumulative_variance:.4f}")
+    
+    return explained_variances, n_components
+
+
+
+def get_cluster_scores(pca_components, embeddings, cluster_range=[2,4,6,8,10,20]):
+    """
+    returns a dictionary mapping number of clusters -> davies_bouldin and silhouette scores
+    """
+    # Apply PCA to reduce dimensions
+    if pca_components > 0:
+        normed_embeddings = preprocessing.normalize(embeddings)
+        pca = PCA(n_components=pca_components)
+        # reduce dimensionality
+        normed_embeddings = pca.fit_transform(normed_embeddings)
+        # convert for cosine distance
+    else: 
+        normed_embeddings = preprocessing.normalize(embeddings)
+
+    # Dictionary to store Davies-Bouldin and Silhouette scores for each k
+    results = {}
+
+    # Loop over each number of clusters (k)
+    for k in cluster_range:
+        # Apply KMeans clustering
+        kmeans = KMeans(n_clusters=k, random_state=0)
+        cluster_labels = kmeans.fit_predict(normed_embeddings)
+
+        # Calculate Davies-Bouldin Index
+        db_index = davies_bouldin_score(normed_embeddings, cluster_labels)
+        
+        # Calculate Silhouette Score (only if k > 1)
+        silhouette_avg = silhouette_score(normed_embeddings, cluster_labels)
+
+        ch_score = calinski_harabasz_score(normed_embeddings, cluster_labels)
+        
+        
+        results[k] = {'davies_bouldin': db_index, 
+                      'silhouette': silhouette_avg, 
+                      "Calinski_Harabasz":ch_score}
+        
+        print(f"PCA Dim: {pca_components}, Clusters: {k}, CH score:{ch_score} DB Index: {db_index:.3f}, Silhouette Score: {silhouette_avg:.3f}" if k > 1 else f"PCA Dim: {dim}, Clusters: {k}, DB Index: {db_index:.3f}")
+
+    return results
+
+def cluster_items(embeddings, pca_n, k):
+    """
+    does a kmeans on the sent embeddings, after preprocessing.normalizing them
+    and pca ing them
+    returns the labels for the clusters
+    """
+    # Apply PCA to reduce dimensions
+    normed_embeddings = preprocessing.normalize(embeddings)
+    pca = PCA(n_components=pca_n)
+    # reduce dimensionality
+    normed_embeddings = pca.fit_transform(normed_embeddings)
+
+    kmeans = KMeans(n_clusters=k, random_state=0)
+    cluster_labels = kmeans.fit_predict(normed_embeddings)
+    return cluster_labels
