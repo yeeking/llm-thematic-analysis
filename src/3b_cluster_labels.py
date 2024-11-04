@@ -47,8 +47,9 @@ if __name__ == "__main__":
     max_score = np.max(feature_scores)
     threshold_score = silhouette_target * max_score
     print(f"Sihouette score in range {min_score} to {max_score} - target {threshold_score}")
-    # now find the k that goes over the targer
-    for k,i in enumerate(cluster_scores.keys()):
+    # now find the k that goes over the target
+    best_k = np.max(list(cluster_scores.keys())) # start with the highest k
+    for i,k in enumerate(cluster_scores.keys()):
         if feature_scores[i] >= threshold_score:
             print(f"Went over {silhouette_target} with score of {threshold_score} at k {k}")
             best_k = k
@@ -57,11 +58,10 @@ if __name__ == "__main__":
     print(f"Proceeding with pca {best_pca_n} and k {best_k}")
     labels = ta_utils.cluster_items(embeddings, pca_n=best_pca_n, k=best_k)
     data = pd.read_csv(csv_file)
-    data["embeddings"] = ["" for ind,row in data.iterrows()]
-    data["cluster"] = [labels[ind] for ind,row in data.iterrows()]
-    outfile = csv_file[0:-4] + "_clusters.csv"
+    outdata = pd.DataFrame({"tag":data["tag"], "cluster": [labels[ind] for ind,row in data.iterrows()]})
+    outfile = f"{run_name}_{best_k}_clusters.csv"
     print(f"Saving cluster labels to {outfile}")
-    data.to_csv(csv_file[0:-4] + "_clusters.csv")
+    outdata.to_csv(outfile)
     
     
     
