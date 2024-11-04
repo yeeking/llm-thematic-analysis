@@ -5,7 +5,8 @@ from nltk.tokenize import TextTilingTokenizer
 import ast 
 import ollama
 import numpy as np
-
+from openai import OpenAI
+import re
 
 
 ## utiltiy functions for thematic analysis
@@ -46,9 +47,9 @@ def get_files_in_folder(folder: str, extension: str):
             if os.path.isfile(os.path.join(folder, file)) and file.endswith(extension)]
 
 
-def get_chat_completion(prompt:str, model="llama3.2:latest", max_tokens=100):
+def get_chat_completion(prompt:str, model:str, max_tokens=100):
     """
-    generic function to do a chat completion
+    carry out a chat completion using the webui layer on top of ollama
     """
     global BASE_URL
     url = f'{BASE_URL}/api/chat/completions'
@@ -72,6 +73,26 @@ def get_chat_completion(prompt:str, model="llama3.2:latest", max_tokens=100):
     text = data["choices"][0]["message"]["content"]
     return text
 
+
+def get_chat_completion_lmstudio(prompt:str, model:str):
+    """
+    get_chat_completion but talking to the 'openai-like' API of lm studio instead
+    of webui
+    """
+    client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
+    completion = client.chat.completions.create(
+        # model="lmstudio-community/Llama-3.1-Nemotron-70B-Instruct-HF-GGUF",
+        # model="lmstudio-community/Meta-Llama-3.1-70B-Instruct-GGUF",
+        model=model, 
+        messages=[
+        # {"role": "system", "content": "Always answer in rhymes."},
+        {"role": "user", "content": prompt}
+        ]
+        # temperature=0.7,
+    )
+    # print(f"Got lmstudio result {completion}")
+    result = completion.choices[0].message.content
+    return result 
 
 def list_collections():
     """
@@ -207,13 +228,38 @@ def get_text_summary(text:str):
     summary = get_chat_completion(text)
     return summary
 
-def split_text_semantic(text:str):
-    tt_tokenizer = TextTilingTokenizer()
-    segments = tt_tokenizer.tokenize(text)
-    return segments
+def split_text_on_sentences(text, n_sentences=3, n_overlap_sentences=1):
+    # Split the text into sentences
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    # List to hold the fragments
+    fragments = [] 
+    # Loop to create fragments with the required overlap
+    for i in range(0, len(sentences), n_sentences - n_overlap_sentences):
+        fragment = sentences[i:i + n_sentences]
+        if len(fragment) < n_sentences:  # Stop if fragment is shorter than desired length
+            break
+        fragments.append(" ".join(fragment))
+    
+    return fragments
 
+def doc_to_frags_sentence(doc_id:str, n_sentences=3, n_overlap_sentences=1):
+    """
+    load the sent doc_id from the server, get contents and fragment it
+    """
+    print(f"Fragging and tagging doc {doc_id}")
+    text = get_doc_contents(doc_id)
+    frags = split_text_on_sentences(text, n_sentences,n_overlap_sentences)
+    return frags
 
-
+def doc_to_frags_semantic(doc_id:str):
+    """
+    load the sent doc_id from the server, get contents and fragment it
+    """
+    doc_text = get_doc_contents(doc_id)
+    # frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
+    frags = split_text_semantic(doc_text)
+    # tag the fragments 
+    return frags
 
 def split_text(text:str, frag_length:int, hop_size:int):
     """
@@ -230,17 +276,38 @@ def split_text(text:str, frag_length:int, hop_size:int):
         
     return frags
 
-def generate_tags(text:str, model="llama3.2:latest", bad_tags_file='bad_tags.txt'):
+def split_text_semantic(text:str):
+    """
+    Split using the NLTK TextTilingTokenizer - from its docs: 
+    Tokenize a document into topical sections using the TextTiling algorithm. This algorithm detects subtopic shifts based on the analysis of lexical co-occurrence patterns.
+
+    The process starts by tokenizing the text into pseudosentences of a fixed size w. Then, depending on the method used, similarity scores are assigned at sentence gaps. The algorithm proceeds by detecting the peak differences between these scores and marking them as boundaries. The boundaries are normalized to the closest paragraph break and the segmented text is returned.
+    """
+    tt_tokenizer = TextTilingTokenizer()
+    segments = tt_tokenizer.tokenize(text)
+    return segments
+
+
+
+def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_tags.txt'):
     """
     generate a list of tags for the sent text
     """
     prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
-
-    tags = get_chat_completion(prompt)
+    # print(f"Sending initial prompt {prompt}")
+    if lm_studio_mode:
+        tags = get_chat_completion_lmstudio(prompt, model)
+    else:
+        tags = get_chat_completion(prompt, model)
 
     # now ask it to format it as json
     prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictioary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
-    tags_raw = get_chat_completion(prompt, model)
+    # print(f"Sending cleanup prompt")
+    if lm_studio_mode:
+        tags_raw = get_chat_completion_lmstudio(prompt, model)
+    else:
+        tags_raw = get_chat_completion(prompt, model)
+
     # print(f"\n\n***Raw tag data: {tags_raw}")
     # now try for a rough parsing of the data into JSON
     try:
@@ -266,9 +333,26 @@ def text_to_embeddings(text):
     embedding = response["embedding"]
     return embedding
 
+
+
+def compute_tag_embeddings_via_description_lmstudio(tag, model):
+    prompt = f"I am working on a qualitative analysis of some interviews wherein I am assigning tags to fragments of text. I have assigned the following tag: '{tag}' to an extract from the interview. Please can you write a short description of what that tag is likely to be about. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. "
+    description = get_chat_completion_lmstudio(prompt, model)
+    emb = text_to_embeddings(description)
+    return description, emb
+
+
 def compute_tag_embeddings_via_description(tag:str, model):
-    prompt = f"Please write a description of what you think the following tag is about, given that the tag has been attached to some text from an interview where two people are discussing various topics related to exams in higher education. Tags might refer to the tone of the discussion or the content, or both. Use a neutral tone - just try to guess what the tag relates to. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. Here is the tag: '{t}'"
-    description = get_chat_completion(prompt, model)
+    prompt = f"I am working on a qualitative analysis of some interviews wherein I am assigning tags to fragments of text. I have assigned the following tag: '{tag}' to an extract from the interview. Please can you write a short description of what that tag is likely to be about. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. "
+    # print(f"Running prompt '{prompt}'")
+    # description = get_chat_completion(prompt, model)
+    result = ollama.generate(model=model, prompt=prompt, keep_alive=1)
+    assert "response" in result.keys(), f"ollama response looks bad {result}"
+    description = result["response"]
+    # result = ollama.chat(model=model, messages=prompt, keep_alive=1)
+    # print(result)
+    # description = "test"
+    # print(f"done. Got result '{description}'")
     emb = text_to_embeddings(description)
     return description, emb
     
