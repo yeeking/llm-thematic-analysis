@@ -30,14 +30,14 @@ if __name__ == "__main__":
     print("Gettting tags from a collection and summarising")
     print(sys.argv)
     # assert len(sys.argv) == 5, "Usage: python script.py  json_tags_to_quotes_File json_tag_z_score_file json_merged_tag_file csv_codebook"
-    assert len(sys.argv) == 4, "Usage: python script.py  json_tags_to_quotes_File csv_embeddings_file llm-model"
+    assert len(sys.argv) == 3, "Usage: python script.py  json_tags_to_quotes_File llm-model"
     
     # print(sys.argv)
     # collection_name = sys.argv[1]
     json_naive_tag_file = sys.argv[1] # read this in 
-    codebook_csv_file = sys.argv[2] # write this out   
+    # codebook_csv_file = sys.argv[2] # write this out   
     assert os.path.exists(json_naive_tag_file), f"Cannot find tag input file {json_naive_tag_file}"
-    model = sys.argv[3]
+    model = sys.argv[2]
 
     # extract the 'naive' tags from step 2a
     with open(json_naive_tag_file) as f:
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     # Display the resulting DataFrame
     print(df.head())
-    df.to_csv(codebook_csv_file)
+    df.to_csv(json_naive_tag_file[0:-5] + "_embeddings.csv")
 
 
         

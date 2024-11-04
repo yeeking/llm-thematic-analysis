@@ -1,7 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# ## Prepare the data
+# https://pypi.org/project/s-dbw/
+#  S_Dbw (Scatter-Density between-within) index performed
+# best in a variety of simulated clustering scenarios
+# Y. Liu, Z. Li, H. Xiong, X. Gao and J. Wu, "Understanding of Internal Clustering Validation Measures," 2010 IEEE International Conference on Data Mining, Sydney, NSW, Australia, 2010, pp. 911-916, doi: 10.1109/ICDM.2010.35. keywords: {Indexes;Noise;Clustering algorithms;Noise measurement;Current measurement;Elbow;Economics},
+# 
 
 import numpy as np
 from sklearn.decomposition import PCA
@@ -9,6 +10,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import davies_bouldin_score
 from sklearn import preprocessing
 from sklearn.metrics import davies_bouldin_score, silhouette_score
+from sklearn.metrics import calinski_harabasz_score
+
 import pandas as pd 
 import json 
 
@@ -102,10 +105,13 @@ def get_cluster_scores(pca_components, embeddings, cluster_range=[2,4,6,8,10,20]
         
         # Calculate Silhouette Score (only if k > 1)
         silhouette_avg = silhouette_score(normed_embeddings, cluster_labels)
+
+        ch_score = calinski_harabasz_score(normed_embeddings, cluster_labels)
         
         
         results[k] = {'davies_bouldin': db_index, 
-                      'silhouette': silhouette_avg}
+                      'silhouette': silhouette_avg, 
+                      "Calinski_Harabasz":ch_score}
         
         print(f"PCA Dim: {pca_components}, Clusters: {k}, DB Index: {db_index:.3f}, Silhouette Score: {silhouette_avg:.3f}" if k > 1 else f"PCA Dim: {dim}, Clusters: {k}, DB Index: {db_index:.3f}")
 
@@ -136,10 +142,11 @@ def plot_cluster_scores(k_to_scores:dict, feature, outfile, pca_components):
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 3, f"USage: python script.py tags_and_embeddings_csv plot_folder"
+    assert len(sys.argv) == 4, f"USage: python script.py tags_and_embeddings_csv plot_folder run_name"
 
     csv_file = sys.argv[1]
     plot_folder = sys.argv[2]
+    run_name = sys.argv[3] # 
     assert os.path.exists(csv_file)
     assert os.path.exists(plot_folder)
 
@@ -148,7 +155,7 @@ if __name__ == "__main__":
     tags_to_enbs = get_tag_to_embeddings(csv_file)
     embeddings = list(tags_to_enbs.values())
     pca_results, best_n = get_pca_variances(embeddings)
-    plot_pca_results(pca_results, plot_folder + "/pca.png")
+    plot_pca_results(pca_results, plot_folder + "/"+run_name+"_pca.png")
     cluster_scores = get_cluster_scores(best_n, embeddings, cluster_range=range(2, 100))
     # zero for pca_comps forces it to use the complete embedding vector for clustering 
     # cluster_scores = get_cluster_scores(0, embeddings, cluster_range=range(2, 100))
@@ -157,7 +164,8 @@ if __name__ == "__main__":
         break
     print(f"Found cluster features {features} for ks {cluster_scores.keys()}")
     for f in features:
-        plot_cluster_scores(cluster_scores, f, plot_folder + "/clust"+f+".png", best_n)
+        fname = f"{plot_folder}/{run_name}_{f}.png"
+        plot_cluster_scores(cluster_scores, f, fname, best_n)
 
 
 

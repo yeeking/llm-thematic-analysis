@@ -23,9 +23,9 @@ import re
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
+API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
 # API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-# API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-API_TOKEN = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac-studio
+# API_TOKEN = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac-studio
 # API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
@@ -300,7 +300,7 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
         tags = get_chat_completion(prompt, model)
 
     # now ask it to format it as json
-    prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictioary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
+    prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictionary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
     # print(f"Sending cleanup prompt")
     # note we can do this with a smaller model 
     # if lm_studio_mode:
