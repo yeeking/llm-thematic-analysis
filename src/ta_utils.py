@@ -5,7 +5,7 @@ from nltk.tokenize import TextTilingTokenizer
 import ast 
 import ollama
 import numpy as np
-
+import re 
 
 
 ## utiltiy functions for thematic analysis
@@ -267,11 +267,32 @@ def text_to_embeddings(text):
     return embedding
 
 def compute_tag_embeddings_via_description(tag:str, model):
+    """
+    generates an embedding for the sent tag by first generating a description
+    then generating an embedding of the description.
+    """
     prompt = f"Please write a description of what you think the following tag is about, given that the tag has been attached to some text from an interview where two people are discussing various topics related to exams in higher education. Tags might refer to the tone of the discussion or the content, or both. Use a neutral tone - just try to guess what the tag relates to. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. Here is the tag: '{t}'"
     description = get_chat_completion(prompt, model)
     emb = text_to_embeddings(description)
     return description, emb
     
+def clean_tag(tag:str):
+    """
+    trims any non-alphanumeric characters from the start of the tag, e.g.
+    '- the tag' -> 'the tag' and converts to lower case 
+    """
+    tag = tag.lower()
+    tag = re.sub(r'^[^a-zA-Z]+', '', tag)
+    return tag 
+
+def clean_tag(tag:str):
+    """
+    trims any non-alphanumeric characters from the start of the tag, e.g.
+    '- the tag' -> 'the tag' and converts to lower case 
+    """
+    tag = tag.lower()
+    tag = re.sub(r'^[^a-zA-Z]+', '', tag)
+    return tag 
 
 def get_z_scores(values):
     """

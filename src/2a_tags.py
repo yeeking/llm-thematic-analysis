@@ -103,7 +103,7 @@ def frag_to_tag(frag:str, all_tags:dict, model):
 #             with open(jfile, 'w') as f:
 #                 f.write(j_data)
 
-def save_tags_to_json(all_tags, jfile):
+def save_tags_to_json(all_tags:dict, jfile):
     j_data = json.dumps(all_tags)
     with open(jfile, 'w') as f:
         f.write(j_data)
