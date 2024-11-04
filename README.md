@@ -4,7 +4,7 @@ Workflows to use LLM for thematic and qualitative analysis
 
 ## Setup the servers
 
-The scripts rely on two 'servers': 
+The scripts rely on three 'servers': 
 
 * open-webui: https://docs.openwebui.com/
   This is a web interface and REST API interface on a load of LLM functionality such as RAG-able document stores, unified interface on LLM servers, chat etc.
@@ -13,6 +13,8 @@ The scripts rely on two 'servers':
 * ollama: https://ollama.com/
   This is an LLM and embeddings server. open-webui talks to this but you can also talk to it directly. 
   It makes it easy to download and serve a variety of models such as llama 3.1, 3.2 etc.
+
+* lm-studio: I ended up using lm-studio instead of ollama as the backend LLM host as it was a bit clearer which model and which quant I was using and it has more direct access to a wider variety of models.
 
 
 ```
@@ -85,7 +87,11 @@ llama3:latest            	365c0bd3c000	4.7 GB	5 months ago
 ```
 
 ```
-python 2a_tags.py collection_name frag_len frag_hop json_outfile model
+# version of the command used - ended up talking directly
+# to lm-studio as a little clearer which model and quant is running 
+python 2a_tags.py collusion-mac 3 1   "lmstudio-community/gemma-2-27b-it-GGUF"
+#Gettting tags from a collection and summarising
+#python 2a_tags.py collection_name frag_len frag_hop json_outfile model
 ```
 
 ### Extract embeddings for the tags
