@@ -13,57 +13,7 @@ from nltk.tokenize import sent_tokenize
 import re 
 import pandas as pd 
 
-def doc_to_frags_semantic(doc_id:str):
-    """
-    load the sent doc_id from the server, get contents and fragment it
-    """
-    print(f"Fragging and tagging doc {doc_id}")
-    doc_text = ta_utils.get_doc_contents(doc_id)
-    print(f"Got text of len {len(doc_text)}")
-    # frags = ta_utils.split_text(doc_text, frag_len, frag_hop)
-    frags = ta_utils.split_text_semantic(doc_text)
-    # tag the fragments 
-    print(f"Frag count for doc: {len(frags)}")
-    return frags
 
-def doc_to_frags_sentence(doc_id:str, n_sentences=3, n_overlap_sentences=1):
-    """
-    load the sent doc_id from the server, get contents and fragment it
-    """
-    print(f"Fragging and tagging doc {doc_id}")
-    text = ta_utils.get_doc_contents(doc_id)
-    frags = split_text_on_sentences(text, n_sentences,n_overlap_sentences)
-    return frags
-
-
-def split_text_on_sentences(text, n_sentences=3, n_overlap_sentences=1):
-    # Split the text into sentences
-    sentences = re.split(r'(?<=[.!?]) +', text)
-    
-    # List to hold the fragments
-    fragments = []
-    
-    # Loop to create fragments with the required overlap
-    for i in range(0, len(sentences), n_sentences - n_overlap_sentences):
-        fragment = sentences[i:i + n_sentences]
-        if len(fragment) < n_sentences:  # Stop if fragment is shorter than desired length
-            break
-        fragments.append(" ".join(fragment))
-    
-    return fragments
-
-
-# def split_text_on_sentences(text, n_sentences=3, n_overlap_sentences=1):
-#     sentences = sent_tokenize(text)
-#     # List to hold the fragments
-#     fragments = []
-#     # Loop to create fragments with the required overlap
-#     for i in range(0, len(sentences), n_sentences - n_overlap_sentences):
-#         fragment = sentences[i:i + n_sentences]
-#         if len(fragment) < n_sentences:  # Stop if fragment is shorter than desired length
-#             break
-#         fragments.append(" ".join(fragment))    
-#     return fragments
 
 def frag_to_tag(frag:str, all_tags:dict, model):
     """
@@ -72,7 +22,7 @@ def frag_to_tag(frag:str, all_tags:dict, model):
     """
 
     # print(f"***Getting tags for \n\n{frag} \n\n")
-    tags = ta_utils.generate_tags(frag, model=model)
+    tags = ta_utils.generate_tags(frag, model=model, lm_studio_mode=True)
     # add tags to all tags, avoiding repeated tags
     for t in tags:
         if t not in all_tags.keys():
@@ -111,16 +61,21 @@ def save_tags_to_json(all_tags:dict, jfile):
 ## Import the documents to a collection
 if __name__ == "__main__":
     print("Gettting tags from a collection and summarising")
-    assert len(sys.argv) == 6, "Usage: python script.py collection_name frag_len frag_hop json_outfile model"
+    assert len(sys.argv) == 5, "Usage: python script.py collection_name frag_len frag_hop model"
     print(sys.argv)
     collection_name = sys.argv[1]
     frag_len = int(sys.argv[2])
     frag_hop = int(sys.argv[3])
-    jfile = sys.argv[4]
+    # jfile = sys.argv[4]
     # model = "llama3.1:70b"
     # model = "llama3.2:3b-instruct-q8_0"
     # model=  "llama3.1:8b"
-    model = sys.argv[5]
+    model = sys.argv[4]
+
+    jfile = collection_name + "-" + model
+    jfile = re.sub(r'[^a-zA-Z0-9]', '', jfile)
+    jfile = jfile + ".json"
+    csvfile = jfile[0:-5] + ".csv"
     # do a quick test on the file
     with open(jfile, 'w') as f:
         f.write("")
@@ -137,7 +92,7 @@ if __name__ == "__main__":
     total_frags = 0
     for doc_id in docs:
         # all_frags[doc_id] = doc_to_frags_semantic(doc_id)
-        all_frags[doc_id] = doc_to_frags_sentence(doc_id, frag_len, frag_hop)
+        all_frags[doc_id] = ta_utils.doc_to_frags_sentence(doc_id, frag_len, frag_hop)
         
         total_frags = total_frags + len(all_frags[doc_id])
     print(f"Total frags: {total_frags}")
@@ -145,10 +100,12 @@ if __name__ == "__main__":
     
     all_tags = {}
     done_frags = 0
+    
+    ## refactored so I can use a progress bar to track me across all the frags as opposed to per doc
     with tqdm(total=total_frags, desc="Processing Fragments") as pbar:
-        for doc_id in docs[0:1]:
+        for doc_id in docs:
             frags = all_frags[doc_id]
-            for f in frags[0:1]:
+            for f in frags:
                 # print(f)
                 frag_to_tag(f, all_tags, model)
                 done_frags = done_frags + 1
@@ -165,4 +122,4 @@ if __name__ == "__main__":
         "tag":list(all_tags.keys()),
         "quotes":[json.dumps(all_tags[k]) for k in all_tags.keys()]
     })
-    df.to_csv(jfile + ".csv")
+    df.to_csv(csvfile)
