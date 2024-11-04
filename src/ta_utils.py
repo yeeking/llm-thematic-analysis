@@ -303,10 +303,12 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
     # now ask it to format it as json
     prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictioary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
     # print(f"Sending cleanup prompt")
-    if lm_studio_mode:
-        tags_raw = get_chat_completion_lmstudio(prompt, model)
-    else:
-        tags_raw = get_chat_completion(prompt, model)
+    # note we can do this with a smaller model 
+    # if lm_studio_mode:
+    #     tags_raw = get_chat_completion_lmstudio(prompt, model)
+    # else:
+    #     tags_raw = get_chat_completion(prompt, model)
+    tags_raw = get_chat_completion(prompt, model="llama3.2:latest")
 
     # print(f"\n\n***Raw tag data: {tags_raw}")
     # now try for a rough parsing of the data into JSON
