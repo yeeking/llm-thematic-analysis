@@ -107,6 +107,19 @@ def list_collections():
     doc_collections = []
     return doc_collections
 
+def get_collection_list():
+    """
+    returns a list of available collections
+    """
+    global BASE_URL
+    url = f'{BASE_URL}/api/v1/knowledge'
+    headers = get_api_headers()
+    response = requests.get(url, headers=headers)
+    k_list = response.json()
+    assert type(k_list) is list, f"Expected a list of collections but got {k_list}"
+    # assert "detail" not in k_list.keys(), f"Looks like the request failed : {k_list}"
+    return k_list
+
 def get_collection_id(name:str):
     """
     check if a collection exists.
@@ -299,7 +312,8 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
     """
     generate a list of tags for the sent text
     """
-    prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
+    # prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
+    prompt = f"The following text is an extract from an interview: \"{text}\". (That is the end of the extract). I would like you to generate one or more useful tags to describe the text. The tag should contain a sense of the drive, sentiment or emotion of the text and it should clearly identify the topic, subject or object of the text. For example \"matter-of-fact response\" is not a useful tag because it does not contain the topic. \"doubtful of accuracy\" is not a useful tag because it is not clear what the accuracy refers to. \"acceptance of technological supplementation\" is a helpful and useful tag because it identifies the direction and object. \"concern for unintentional offenders\" is a useful tag because it identifies the drift and the target. Also, I do not want tags that describe the flow of the conversation, for example \"casual conversation closer\" is not useful because it describes the conversation not the content of the conversation. If the text seems to contain the interviewer Andrea asking a question, then you can ignore that text and just concentrate on the answer to the question if the answer is there. Please write the most useful tags you can as a bullet point list. You do not need to explain why you chose the tags, just print the tags themselves. "
     # print(f"Sending initial prompt {prompt}")
     if lm_studio_mode:
         tags = get_chat_completion_lmstudio(prompt, model)
