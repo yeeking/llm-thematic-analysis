@@ -28,6 +28,11 @@ if __name__ == "__main__":
     clean_data = {}
     for tag in data.keys():
         clean_tag = ta_utils.clean_tag(tag)
+        if len(clean_tag.strip()) == 0: continue # ignore blank tags
+        # print(f"tag {tag} to {clean_tag}")
+        assert pd.isna(clean_tag) != True, f"Bad tag {tag} went  to {clean_tag}"
+        assert len(clean_tag.strip()) != 0, f"Bad tag {tag} went to {clean_tag}"
+        
         if clean_tag not in clean_data.keys():# allows for merging
             clean_data[clean_tag] = []
         clean_data[clean_tag].extend(data[tag]) # append quotes to existing list which might be empty at first
@@ -35,6 +40,8 @@ if __name__ == "__main__":
     print(f"Reduced tags from {len(data.keys())} to {len(clean_data.keys())}")
     out_json = tag_file[0:-5] + "_cleaned.json"
     out_csv = tag_file[0:-5] + "_cleaned.csv"
+
+    # double checking cleaning did not generate nans 
 
     df = pd.DataFrame({
         "tag":list(clean_data.keys()),

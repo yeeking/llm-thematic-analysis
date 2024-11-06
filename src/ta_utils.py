@@ -14,6 +14,7 @@ from sklearn import preprocessing
 from sklearn.metrics import davies_bouldin_score, silhouette_score
 from sklearn.metrics import calinski_harabasz_score
 import pandas as pd 
+from openai import OpenAI
 
 ## utiltiy functions for thematic analysis
 
@@ -30,9 +31,9 @@ import pandas as pd
 ## in open webui this is not super secret
 ## so i'm putting it here. If we talk to other apis
 ## this should go in the bash envt. 
-API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
 # API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
-# API_TOKEN = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac-studio
+# API_TOKEN = "sk-43130b6612624d6aaaecb5fa980fda0c" # tp42
+API_TOKEN = "sk-329c26835f524e168d34eb5cc4ac5dad" # mac-studio
 # API_TOKEN = "sk-1b2e731745ce43b99d2f1cf4a0edd895" # wispa
 BASE_URL = "http://127.0.0.1:8080/" # Replace with your Open WebUI instance URL
 
@@ -92,8 +93,10 @@ def get_chat_completion_lmstudio(prompt:str, model:str):
         model=model, 
         messages=[
         # {"role": "system", "content": "Always answer in rhymes."},
-        {"role": "user", "content": prompt}
-        ]
+        {"role": "user", "content": prompt}, 
+        ],
+        max_tokens=200 # stop it from ad nauseam
+
         # temperature=0.7,
     )
     # print(f"Got lmstudio result {completion}")
@@ -313,7 +316,7 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
     generate a list of tags for the sent text
     """
     # prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
-    prompt = f"The following text is an extract from an interview: \"{text}\". (That is the end of the extract). I would like you to generate one or more useful tags to describe the text. The tag should contain a sense of the drive, sentiment or emotion of the text and it should clearly identify the topic, subject or object of the text. For example \"matter-of-fact response\" is not a useful tag because it does not contain the topic. \"doubtful of accuracy\" is not a useful tag because it is not clear what the accuracy refers to. \"acceptance of technological supplementation\" is a helpful and useful tag because it identifies the direction and object. \"concern for unintentional offenders\" is a useful tag because it identifies the drift and the target. Also, I do not want tags that describe the flow of the conversation, for example \"casual conversation closer\" is not useful because it describes the conversation not the content of the conversation. If the text seems to contain the interviewer Andrea asking a question, then you can ignore that text and just concentrate on the answer to the question if the answer is there. Please write the most useful tags you can as a bullet point list. You do not need to explain why you chose the tags, just print the tags themselves. "
+    prompt = f"The following text is an extract from an interview: \"{text}\". (That is the end of the extract). I would like you to generate one or more useful tags to describe the text. The tag should contain a sense of the drive, sentiment or emotion of the text and it should clearly identify the topic, subject or object of the text. For example \"matter-of-fact response\" is not a useful tag because it does not contain the topic. \"doubtful of accuracy\" is not a useful tag because it is not clear what the accuracy refers to. I do not want tags that describe the flow of the conversation, for example \"casual conversation closure\" is not useful because it describes the conversation not the content of the conversation. If the text seems to contain the interviewer Andrea asking a question, then you can ignore that text and just concentrate on the answer to the question if the answer is there. Here are examples of useful tags: \"acceptance of technological supplementation\" is an example of a helpful and useful tag because it identifies the direction and object. \"concern for unintentional offenders\" is also a useful tag because it identifies the drift and the target. Please write the most useful tags you can as a bullet point list. You do not need to explain why you chose the tags, just print the tags themselves. "
     # print(f"Sending initial prompt {prompt}")
     if lm_studio_mode:
         tags = get_chat_completion_lmstudio(prompt, model)
@@ -420,6 +423,10 @@ def get_tag_to_embeddings(csv_filename, embedding_field="embeddings"):
     tag_embeddings = {}
 
     for ind,row in data.iterrows():
+        if pd.isna(row["tag"]):
+            print(f"Found bad tag. Skipping {row['tag']}")
+            continue
+        # assert pd.isna(row["tag"]) != True, f"Found a nan tag. {row['tag']} "
         tag_embeddings[row['tag']] = np.array(json.loads(row[embedding_field]))
     return tag_embeddings
     
@@ -431,6 +438,7 @@ def get_pca_variances(embeddings):
     """
     maxn = len(embeddings)
     pca_components = np.arange(2, maxn, maxn/100) # 10 values from 2 to max components
+    print(f"Runniung pca with values {pca_components} on embeeddings shape {embeddings[0]}")
     # convert to normalised version which is how we'll run it later
     embeddings = preprocessing.normalize(embeddings)
 

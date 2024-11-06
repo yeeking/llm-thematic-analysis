@@ -30,29 +30,6 @@ def frag_to_tag(frag:str, all_tags:dict, model):
         all_tags[t].append(frag)
     
 
-# def frags_to_tags(frags:list, all_tags:dict, save_mode:bool, jfile:str, model="llama3.2:3b-instruct-q8_0"):
-#     """
-#     process the sent list of frags by extracting tags and storing them 
-#     into all_tags
-#     """
-#     f_ind = 0
-#     # model = "llama3.1:70b"
-#     for frag in frags:
-#         print(f"Getting tags for frag {f_ind} of {len(frags)} with model {model}")
-#         # print(f"***Getting tags for \n\n{frag} \n\n")
-#         tags = ta_utils.generate_tags(frag, model=model)
-#         # add tags to all tags, avoiding repeated tags
-#         print(f"Tag count for frag {len(tags)}")
-#         for t in tags:
-#             if t not in all_tags.keys():
-#                 all_tags[t] = []
-#             all_tags[t].append(frag)
-#         f_ind = f_ind + 1
-#         if save_mode:
-#             j_data = json.dumps(all_tags)
-#             with open(jfile, 'w') as f:
-#                 f.write(j_data)
-
 def save_tags_to_json(all_tags:dict, jfile):
     j_data = json.dumps(all_tags)
     with open(jfile, 'w') as f:

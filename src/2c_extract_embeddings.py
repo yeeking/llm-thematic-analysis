@@ -60,6 +60,9 @@ if __name__ == "__main__":
         client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
 
         for t in tag_list:
+            if pd.isna(t):
+                print(f"Found bad tag. Skipping {t}")
+                continue
             # v1 generate a description of the tag and compute the embedding of the 
             # description
             # description, embedding = ta_utils.compute_tag_embeddings_via_description(t, model)
