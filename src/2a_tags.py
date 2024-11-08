@@ -22,7 +22,9 @@ def frag_to_tag(frag:str, all_tags:dict, model):
     """
 
     # print(f"***Getting tags for \n\n{frag} \n\n")
-    tags = ta_utils.generate_tags(frag, model=model, lm_studio_mode=True)
+    # tags = ta_utils.generate_tags(frag, model=model, lm_studio_mode=True)
+    tags = ta_utils.generate_tags(frag, model=model, lm_studio_mode=False)
+    print(f"Got tags {tags}")
     # add tags to all tags, avoiding repeated tags
     for t in tags:
         if t not in all_tags.keys():

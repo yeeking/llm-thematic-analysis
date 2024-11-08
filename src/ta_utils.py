@@ -63,6 +63,8 @@ def get_chat_completion(prompt:str, model:str, max_tokens=100):
     headers = get_api_headers()
     data = {
         "model":model, 
+        "keep_alive":240, # don't unload the model for 240 s in case another request..
+        "num_ctx":8192,  # this makes llama 3.1 60b work in ollama - hope it gets sent through
     #   "model": "llama3.2:latest",
     # "model":"llama3.1:70b", 
     #   "model":"llama3.1:latest", 
@@ -81,16 +83,16 @@ def get_chat_completion(prompt:str, model:str, max_tokens=100):
     return text
 
 
-def get_chat_completion_lmstudio(prompt:str, model:str):
+def get_chat_completion_lmstudio(prompt:str):
     """
     get_chat_completion but talking to the 'openai-like' API of lm studio instead
     of webui
     """
     client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
     completion = client.chat.completions.create(
-        # model="lmstudio-community/Llama-3.1-Nemotron-70B-Instruct-HF-GGUF",
+        model="lmstudio-community/Llama-3.1-Nemotron-70B-Instruct-HF-GGUF", # it ignores the model anyways
         # model="lmstudio-community/Meta-Llama-3.1-70B-Instruct-GGUF",
-        model=model, 
+        # model=model, 
         messages=[
         # {"role": "system", "content": "Always answer in rhymes."},
         {"role": "user", "content": prompt}, 
@@ -317,20 +319,14 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
     """
     # prompt = f"The following text is a an extract from an interview. Here is the text: \"{text}\". I would like you to generate one, two, three or four tags which describe the text. The tags can have one, two or three words and should describe the text and also identify the intention, sentiment or emotional content of the text. An example of such a tag is: \"happy about the weather\".  You do not need to explain the tags, just print out the list of tags."
     prompt = f"The following text is an extract from an interview: \"{text}\". (That is the end of the extract). I would like you to generate one or more useful tags to describe the text. The tag should contain a sense of the drive, sentiment or emotion of the text and it should clearly identify the topic, subject or object of the text. For example \"matter-of-fact response\" is not a useful tag because it does not contain the topic. \"doubtful of accuracy\" is not a useful tag because it is not clear what the accuracy refers to. I do not want tags that describe the flow of the conversation, for example \"casual conversation closure\" is not useful because it describes the conversation not the content of the conversation. If the text seems to contain the interviewer Andrea asking a question, then you can ignore that text and just concentrate on the answer to the question if the answer is there. Here are examples of useful tags: \"acceptance of technological supplementation\" is an example of a helpful and useful tag because it identifies the direction and object. \"concern for unintentional offenders\" is also a useful tag because it identifies the drift and the target. Please write the most useful tags you can as a bullet point list. You do not need to explain why you chose the tags, just print the tags themselves. "
-    # print(f"Sending initial prompt {prompt}")
+    print(f"Sending initial prompt {prompt}")
     if lm_studio_mode:
-        tags = get_chat_completion_lmstudio(prompt, model)
+        tags = get_chat_completion_lmstudio(prompt)
     else:
         tags = get_chat_completion(prompt, model)
 
     # now ask it to format it as json
     prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictionary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
-    # print(f"Sending cleanup prompt")
-    # note we can do this with a smaller model 
-    # if lm_studio_mode:
-    #     tags_raw = get_chat_completion_lmstudio(prompt, model)
-    # else:
-    #     tags_raw = get_chat_completion(prompt, model)
     tags_raw = get_chat_completion(prompt, model="llama3.2:latest")
 
     # print(f"\n\n***Raw tag data: {tags_raw}")
@@ -354,7 +350,7 @@ def text_to_embeddings(text):
     """
     generate an embedding for the sent text 
     """
-    response = ollama.embeddings(model="mxbai-embed-large", prompt=text, keep_alive=1)
+    response = ollama.embeddings(model="mxbai-embed-large", prompt=text, keep_alive=240) # keep model inn memory for 240 s
     embedding = response["embedding"]
     return embedding
 
@@ -371,10 +367,9 @@ def compute_tag_embeddings_via_description(tag:str, model):
     prompt = f"I am working on a qualitative analysis of some interviews wherein I am assigning tags to fragments of text. I have assigned the following tag: '{tag}' to an extract from the interview. Please can you write a short description of what that tag is likely to be about. Only provide the tag description please, not your justification of that description, and do not refer to the tag, just provide the description. "
     # print(f"Running prompt '{prompt}'")
     # description = get_chat_completion(prompt, model)
-    result = ollama.generate(model=model, prompt=prompt, keep_alive=1)
+    result = ollama.generate(model=model, prompt=prompt, keep_alive=240) # keep alive is measured in seconds and tells ollama to keep the model loaded
     assert "response" in result.keys(), f"ollama response looks bad {result}"
     description = result["response"]
-    # result = ollama.chat(model=model, messages=prompt, keep_alive=1)
     # print(result)
     # description = "test"
     # print(f"done. Got result '{description}'")
@@ -522,3 +517,53 @@ def cluster_items(embeddings, pca_n, k):
     kmeans = KMeans(n_clusters=k, random_state=0)
     cluster_labels = kmeans.fit_predict(normed_embeddings)
     return cluster_labels
+
+def tags_to_theme(tags, lm_studio_mode, model):
+    research_questions = """
+RQ1: To what extent do academic staff fear that LLM systems will replace or significantly alter their role in exam setting and marking, potentially threatening their job security, autonomy, or ability to exercise professional judgment, and how does this impact their acceptance of these systems? 
+
+RQ2: To what extent do academic staff trust the accuracy and fairness of LLM systems in setting and marking exams, and what are their views on the potential risks and biases associated with these systems, including issues related to biases, transparency, accountability, fairness, false positives/negatives? 
+"""
+    prompt = f"""I am carrying out a thematic analysis of a set of interviews with academics. In the background, I am interested in investigating different elements of the following research questions:
+
+    {research_questions} 
+
+    I have analysed the interviews and come up with the following list of tags that describe a specific theme I found in the contents of the interviews. There are lots of other themes, but this is the one I am interested in now: 
+
+    {tags} 
+
+    I want you to create me a title for the theme. The title should make connections between the tags and the most relevant aspects of the research questions. The tags will not relate to every aspect of the research questions so the theme title should focus more on the tags. 
+    
+    The theme name should be concise and specific, conveying what the tags in this theme represent. Ensure the title reflects the specific aspect of the tags captured by this theme, rather than attempting to cover too much or becoming overly complex. Describe the overarching 'essence' of the theme so that it could be summarised in one to two sentences if needed. The title should reflect both the distinct focus of this set of tags and its relation to the research question. You only need to state the theme title – you do not need to explain why you chose that title.  
+"""
+#     # V2: without research questions
+#     prompt = f"""I am carrying out a thematic analysis of a set of interviews with academics. I have analysed the interviews and come up with the following list of tags that describe a specific theme I found in the contents of the interviews. There are lots of other themes, but this is the one I am interested in now: 
+
+#     {tags} 
+
+#     I want you to create me a title for the theme. The theme name should be concise and specific, conveying what the tags in this theme represent. Ensure the title reflects the specific aspect of the tags captured by this theme, rather than attempting to cover too much or becoming overly complex. Describe the overarching 'essence' of the theme so that it could be summarised in one to two sentences if needed. You only need to state the theme title – you do not need to explain why you chose that title.  
+# """
+    # print(f"{prompt}")
+    # result = ta_utils.get_chat_completion(prompt, model)
+    if lm_studio_mode:
+        result = get_chat_completion_lmstudio(prompt) # lm ignores the model actually
+    else:
+        result = get_chat_completion(prompt, model)
+
+    # stage to ensure we just get the title 
+    prompt = f"Please read the following text and extract the theme title. Present the title in JSON format. Do not explain it, do not make it a dictionary. Here is an example of the format: [\"title\"]. Here is the text: \"{result}\""
+    
+    title_raw = get_chat_completion(prompt, model="llama3.2:latest")
+    # print(f"Got raw title {title_raw}")
+    bad_themes_file = "bad_themes.txt"
+    try:
+        title_raw = json.loads(title_raw)[0]
+    except:
+        with open(bad_themes_file, 'a') as f:
+            f.write(title_raw + "\n")
+        print(f"Could not extract title from '{title_raw}'")
+    assert title_raw in result, f"IT made up a title or something else terrible happened. Here's the result\n\n {result} \n\n\n here's what got extracted {title_raw}"
+    
+    # print(f"Raw title {title_raw}")
+
+    return title_raw 

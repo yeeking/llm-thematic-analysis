@@ -46,7 +46,8 @@ if __name__ == "__main__":
 
             embeddings_csv_file = clean_tag_json_file[0:-5] + "_embeddings.csv"
             cluster_csv_file = f"{embeddings_csv_file[0:-4]}_clusters.csv"
-
+            theme_csv_file = f"{embeddings_csv_file[0:-4]}_clusters_themes.csv"
+        
 
             if "2b" in stages:
                 # CLEAN TAGS
@@ -58,7 +59,7 @@ if __name__ == "__main__":
             if "2c" in stages:
                 # ## EXTRACT EMBEDDINGS
                 assert os.path.exists(clean_tag_json_file), f"Cannot find cleaned tag file {clean_tag_json_file}" 
-                runner = f"python 2c_extract_embeddings.py {clean_tag_json_file} none"
+                runner = f"python 2c_tags_to_embeddings.py {clean_tag_json_file} none"
                 print(f"Running: {runner}")
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
@@ -66,13 +67,13 @@ if __name__ == "__main__":
                 ## GENERATE CLUSTER PLOTS
                 # python 3b_cluster_labels.py ../data/collusionmacgemma27b_cleaned_embeddings.csv ../plots/
                 assert os.path.exists(embeddings_csv_file), f"Cannot find embeddings file {embeddings_csv_file}"
-                runner = f"python 3a_cluster_analysis.py {embeddings_csv_file} ../plots/ {dataset}_{model}"
+                runner = f"python 3a_cluster_visualisation.py {embeddings_csv_file} ../plots/ {dataset}_{model}"
                 print(f"Running: {runner}")
                 subprocess.run(runner, shell=True)
             if "3b" in stages: 
                 ## DO CLUSTER LABELLING 
                 assert os.path.exists(embeddings_csv_file), f"Cannot find embeddings file {embeddings_csv_file}"
-                runner = f"python 3b_cluster_labels.py {embeddings_csv_file}"
+                runner = f"python 3b_embeddings_to_clusters.py {embeddings_csv_file}"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
@@ -82,7 +83,17 @@ if __name__ == "__main__":
                 assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
                 assert os.path.exists(clean_tag_csv_file), f"Cannot find clean tag csv file {clean_tag_csv_file}"
                 
-                runner = f"python 4a_clusters_to_themes.py {cluster_csv_file} {clean_tag_csv_file}"
+                runner = f"python 4a_clusters_to_themes.py {cluster_csv_file} {clean_tag_csv_file} llama3.1:70b-instruct-q5_K_M"
+                print(f"Running: {runner}")  
+                result = subprocess.run(runner, shell=True)
+                assert result.returncode == 0, f"Script {runner} failed "
+            
+            if "4b" in stages:
+                ## convert tags in clusters to themes
+                assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
+                assert os.path.exists(clean_tag_csv_file), f"Cannot find clean tag csv file {clean_tag_csv_file}"
+                
+                runner = f"python 4b_theme_visualisation.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_themes.pdf"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
