@@ -567,3 +567,18 @@ RQ2: To what extent do academic staff trust the accuracy and fairness of LLM sys
     # print(f"Raw title {title_raw}")
 
     return title_raw 
+
+def compute_z_scores(data):
+    """
+    Computes z-scores for a list of numbers.
+
+    Parameters:
+    data (list or array-like): A list of numerical values.
+
+    Returns:
+    list: A list of z-scores corresponding to the input data.
+    """
+    mean = sum(data) / len(data)
+    std_dev = (sum((x - mean) ** 2 for x in data) / len(data)) ** 0.5
+    z_scores = [(x - mean) / std_dev for x in data]
+    return z_scores
