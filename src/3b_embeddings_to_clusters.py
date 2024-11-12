@@ -55,6 +55,7 @@ if __name__ == "__main__":
         if feature_scores[i] <= threshold_score:
             print(f"Went over {feature_target} with score of {threshold_score} at k {k}")
             best_k = k
+            feature_score = feature_scores[i] 
             break
 
     # feature = "silhouette"
@@ -97,4 +98,6 @@ if __name__ == "__main__":
         f.write("pca:", best_pca_n) + ','
         # cluster n
         f.write("clusters:", best_k) + '\n'
+        # feature score
+        f.write(f"")
 
