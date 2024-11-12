@@ -55,6 +55,7 @@ if __name__ == "__main__":
         if feature_scores[i] <= threshold_score:
             print(f"Went over {feature_target} with score of {threshold_score} at k {k}")
             best_k = k
+            cluster_score = feature_scores[i]
             break
 
     # feature = "silhouette"
@@ -90,11 +91,14 @@ if __name__ == "__main__":
     statsfile = "stats.txt"
     with open(statsfile, 'a') as f:
         # clusters_csv
-        f.write(csv_file) + ','
+        f.write(f"{csv_file} ,")
         # tag count
-        f.wtite("tags:", len(embeddings)) + ','
+        f.write(f"tags: {len(embeddings)} ,")
         # pca n
-        f.write("pca:", best_pca_n) + ','
+        f.write(f"pca: {best_pca_n} ,")
         # cluster n
-        f.write("clusters:", best_k) + '\n'
+        f.write(f"clusters k: {best_k} ,")
+        # cluster metric
+        f.write(f"cluster metric: {cluster_score} \n")
+        
 
