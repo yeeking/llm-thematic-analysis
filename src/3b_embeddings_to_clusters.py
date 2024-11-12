@@ -86,7 +86,15 @@ if __name__ == "__main__":
     print(f"Saving cluster labels to {outfile}")
     outdata.to_csv(outfile)
     
-    
-    
-
+    # hacky - write stats out to a file
+    statsfile = "stats.txt"
+    with open(statsfile, 'a') as f:
+        # clusters_csv
+        f.write(csv_file) + ','
+        # tag count
+        f.wtite("tags:", len(embeddings)) + ','
+        # pca n
+        f.write("pca:", best_pca_n) + ','
+        # cluster n
+        f.write("clusters:", best_k) + '\n'
 
