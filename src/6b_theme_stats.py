@@ -1,9 +1,12 @@
 import pandas as pd
 import json
 from collections import defaultdict
+import sys
+import os
 
 # Load the CSV file into a DataFrame
-data = pd.read_csv('your_file.csv')
+assert os.path.exists(sys.argv[1]), f"CSV not found {sys.argv[1]}"
+data = pd.read_csv(sys.argv[1])
 
 # Initialize the dictionary to map themes to their quotes
 theme_to_quotes = defaultdict(list)
@@ -47,15 +50,16 @@ for theme, quotes in all_quotes.items():
     unique_to_shared_ratio = unique_count / shared_unique_count if shared_unique_count > 0 else None
 
     results.append({
-        'theme': theme,
-        'total_count': total_count,                   # Total quotes for the theme
-        'unique_count': unique_count,
-        'shared_count': shared_count,                 # Total number of times quotes are shared
-        'shared_unique_count': shared_unique_count,   # Distinct quotes shared with other themes
-        'unique_to_shared_ratio': unique_to_shared_ratio  # Ratio of unique to shared_unique quotes
+        'Theme': theme,
+        'Quotes': total_count,                   # Total quotes for the theme
+        'Unique': unique_count,
+#        'shared_count': shared_count,                 # Total number of times quotes are shared
+        'Shared': shared_unique_count,   # Distinct quotes shared with other themes
+        '% Unique': round(100 * unique_to_shared_ratio)  # Ratio of unique to shared_unique quotes
     })
 
 # Convert the results to a DataFrame, sort by unique quotes, and display it
 result_df = pd.DataFrame(results)
-result_df = result_df.sort_values(by='unique_count', ascending=False)
+result_df = result_df.sort_values(by='% Unique', ascending=False)
 print(result_df)
+result_df.to_csv('themes.csv')
