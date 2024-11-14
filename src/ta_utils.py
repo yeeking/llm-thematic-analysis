@@ -582,3 +582,11 @@ def compute_z_scores(data):
     std_dev = (sum((x - mean) ** 2 for x in data) / len(data)) ** 0.5
     z_scores = [(x - mean) / std_dev for x in data]
     return z_scores
+
+
+def get_theme_to_ind_lookup(themes):
+    # Sort the list of themes
+    sorted_themes = sorted(themes)
+    # Create the dictionary mapping each theme to its index
+    theme_to_index = {theme: index for index, theme in enumerate(sorted_themes)}
+    return theme_to_index

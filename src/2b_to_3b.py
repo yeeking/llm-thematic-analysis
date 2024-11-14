@@ -89,12 +89,24 @@ if __name__ == "__main__":
                 assert result.returncode == 0, f"Script {runner} failed "
             
             if "4b" in stages:
+                print("Generating TAG and THEME plots")
                 ## convert tags in clusters to themes
-                assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
-                assert os.path.exists(clean_tag_csv_file), f"Cannot find clean tag csv file {clean_tag_csv_file}"
+                # assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
+                assert os.path.exists(theme_csv_file), f"Cannot find theme csv file {theme_csv_file}"
+                assert os.path.exists(embeddings_csv_file), f"Cannot find tag embeddings_csv_file csv file {embeddings_csv_file}"
                 
-                runner = f"python 4b_theme_visualisation.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_themes.pdf"
+                runner = f"python 4b_theme_visualisation.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_tags_and_themes.pdf '{dataset} {model} tags and themes via t-SNE'"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
+
+            if "4d" in stages:
+                print("Generating THEME plots")
+                ## convert tags in clusters to themes
+                assert os.path.exists(theme_csv_file), f"Cannot find theme file {theme_csv_file}"
+                runner = f"python 4d_plot_theme_embeddeings.py {theme_csv_file} ../plots/{dataset}_{model}_themes.pdf '{dataset} {model}_themes T-sNE'"
+                print(f"Running: {runner}")                  
+                result = subprocess.run(runner, shell=True)
+                assert result.returncode == 0, f"Script {runner} failed "
+
             
