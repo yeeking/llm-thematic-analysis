@@ -20,13 +20,6 @@ import numpy as np
 from scipy.stats import pearsonr
 from sklearn.linear_model import LinearRegression
 
-
-def count_matches(list1, list2):
-    matches = 0
-    for i1 in list1:
-        if i1 in list2: matches += 1
-    return matches
-
 if __name__ == "__main__":
     assert len(sys.argv) == 4, f"Usage python script.py themes_csv plot_file plot title"
     themes_csv = sys.argv[1]
@@ -60,34 +53,45 @@ if __name__ == "__main__":
         # 
         # print(f"Theme {theme} has {len(theme_to_quotes[theme])} quotes")
 
-
+    assert len(theme_to_quotes.keys()) == len(themes), "did not get quotes for all themes. "
     print(f"Computing theme-theme distances and quote matches")
     theme_stats = {}
 
-
-    for ind1,theme1 in enumerate(theme_to_quotes.keys()):
+    # compute the distance matrix 
+    for ind1,theme1 in enumerate(themes):
         quotes1 = theme_to_quotes[theme1] 
         emb1 = embeddings[ind1]
         # now check if any of these quotes appear in any other theme
-        for ind2,theme2 in enumerate(theme_to_quotes.keys()):
-            if theme1 == theme2: continue
+        for ind2,theme2 in enumerate(themes):
+            # if theme1 == theme2: continue
             key = theme1 + "_" + theme2
-            alt_key = theme2 + "_" + theme1
+            # alt_key = theme2 + "_" + theme1
             if key in theme_stats.keys():continue
-            if alt_key in theme_stats.keys():continue
+            # if alt_key in theme_stats.keys():continue
             
             quotes2 = theme_to_quotes[theme2]
             emb2 = embeddings[ind2]
-            matches = count_matches(quotes1, quotes2)
+            matches = 0
+            for q1 in quotes1:
+                if q1 in quotes2: matches += 1
+            # check it is not crazy
+            assert matches <= len(quotes1), f"Matched more quotes than there are quotes. Matches: {matches} quotes {len(quotes1)}"
+            # make it a ratio/ or don't as that unfairly identifies
+            # themes with few quotes
+            # matches = 1- ( matches / len(quotes1))
             dist = distance.cosine(emb1, emb2)
-   
-            theme_stats[key] = {"dist":dist, "quote_matches":matches}
+
+            
+            theme_stats[key] = {"t1":theme1, "t2":theme2,  "dist":dist, "quote_matches":matches}
             # print(theme_stats[key])
 
- 
+    ## assert that theme_stats contains an entry for every theme to every other theme 
+
     # Extract data for plotting
     dists = np.array([theme_stats[key]["dist"] for key in theme_stats])
     quote_matches = np.array([theme_stats[key]["quote_matches"] for key in theme_stats])
+    t1s = np.array([theme_stats[key]["t1"] for key in theme_stats])
+    t2s = np.array([theme_stats[key]["t2"] for key in theme_stats])
 
 
     # Compute correlation coefficient and p-value (confidence level)
@@ -129,7 +133,9 @@ if __name__ == "__main__":
             merges.append(1)
         else: merges.append(0)
 
-    quote_dist_data = pd.DataFrame({"key":list(theme_stats.keys()), 
+    quote_dist_data = pd.DataFrame({#"key":list(theme_stats.keys()), 
+                                    "t1":t1s, 
+                                    "t2":t2s, 
                                     "cosine_dist":dists, 
                                     "cosine_z":dist_z, 
                                     "matched_quotes":quote_matches, 
