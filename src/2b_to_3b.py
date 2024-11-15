@@ -25,8 +25,12 @@ import sys
 if __name__ == "__main__":
 
     assert len(sys.argv) == 3, f"Usage python script.py data_folder 2a,2b,2c,3a,3b,4a - you passed {len(sys.argv)} args"
-    datasets = ["collusionmac", "examsettermac"]
-    models = ["gemma27b", "llama323b", "llama3170b"]
+    # datasets = ["collusionmac", "examsettermac"]
+    # models = ["gemma27b", "llama323b", "llama3170b"]
+
+    datasets = ["examsetterv2"]
+    models = ["gemma27b"]
+
     data_folder = sys.argv[1]
 
     assert os.path.exists(data_folder), f"Cannot find data folder {data_folder}"
@@ -69,7 +73,9 @@ if __name__ == "__main__":
                 assert os.path.exists(embeddings_csv_file), f"Cannot find embeddings file {embeddings_csv_file}"
                 runner = f"python 3a_cluster_visualisation.py {embeddings_csv_file} ../plots/ {dataset}_{model}"
                 print(f"Running: {runner}")
-                subprocess.run(runner, shell=True)
+                result = subprocess.run(runner, shell=True)
+                assert result.returncode == 0, f"Script {runner} failed "
+
             if "3b" in stages: 
                 ## DO CLUSTER LABELLING 
                 assert os.path.exists(embeddings_csv_file), f"Cannot find embeddings file {embeddings_csv_file}"
@@ -77,7 +83,7 @@ if __name__ == "__main__":
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
-            
+                print("3b complete. ")
             if "4a" in stages:
                 ## convert tags in clusters to themes
                 assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
