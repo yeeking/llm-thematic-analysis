@@ -96,8 +96,8 @@ if __name__ == "__main__":
     # ds1_labels = [ds1_name + str(ind) for ind,theme in enumerate(ds1_themes)]
     # ds2_labels = [ds2_name + str(ind) for ind,theme in enumerate(ds2_themes)]
     for ind in range(len(ds1_labels)):
-        print(ds1_labels[ind], ds1_themes[ind])
+        print(f"{ds1_labels[ind]},{ds1_themes[ind]}")
     for ind in range(len(ds2_labels)):
-        print(ds2_labels[ind], ds2_themes[ind])
+        print(f"{ds2_labels[ind]},{ds2_themes[ind]}")
         
 

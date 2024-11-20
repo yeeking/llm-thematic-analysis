@@ -190,6 +190,7 @@ def add_doc_to_db(file_path):
     create a file in the database from a local file
     you need to do this before you can add it to a collection
     returns a file_id
+    http://127.0.0.1:8080/api/v1/docs#/files/upload_file_files__post
     """
     global API_TOKEN, BASE_URL
     url = f'{BASE_URL}/api/v1/files/'
@@ -209,6 +210,15 @@ def add_doc_to_db(file_path):
 def add_doc_to_collection(file_id, collection_id):
     """
     add a doc to the sent collection and return its id
+    http://127.0.0.1:8080/api/v1/docs#/knowledge/add_file_to_knowledge_by_id_knowledge__id__file_add_post
+    Note that is automatically adds meta data to the file like this:
+        "meta": {
+        "name": "omar_exam_setter.docx",
+        "content_type": null,
+        "size": 44914,
+        "path": "... /python3.11/site-packages/open_webui/data/uploads/0ee6481c-afa8-488b-817c-f46cf585d7bf_omar_exam_setter.docx",
+        "collection_name": "aa3e43dc-0f10-4f24-9752-16614a3d549a"
+      },
     """
     global BASE_URL
     url = f'{BASE_URL}/api/v1/knowledge/{collection_id}/file/add'
@@ -232,6 +242,26 @@ def get_docs_in_collection(collection_id:str):
     assert ("data" in response.keys()) and ("file_ids" in response["data"].keys()), f"Collection data has no files. Here's what I got back: {response}"
     return response["data"]["file_ids"]
     
+def get_doc_metadata(doc_id):
+    """
+    return the metadata:
+    "meta": {
+        "name": "omar_exam_setter.docx",
+        "content_type": null,
+        "size": 44914,
+        "path": "... /python3.11/site-packages/open_webui/data/uploads/0ee6481c-afa8-488b-817c-f46cf585d7bf_omar_exam_setter.docx",
+        "collection_name": "aa3e43dc-0f10-4f24-9752-16614a3d549a"
+      },
+    """
+    global API_TOKEN, BASE_URL
+    url = f'{BASE_URL}/api/v1/files/{doc_id}'
+    headers = get_api_headers()
+    response = requests.get(url, headers=headers)
+    response = response.json()
+    assert "meta" in response.keys(), f"No meta in doc data {doc_id}: {response['detail']} on url {url}"
+    return response["meta"]
+
+
 def get_doc_contents(doc_id):
     """
     get the doc contents as a string
@@ -241,8 +271,19 @@ def get_doc_contents(doc_id):
     headers = get_api_headers()
     response = requests.get(url, headers=headers)
     response = response.json()
-    assert "content" in response.keys(), f"No content in doc {doc_id}"
+    assert "content" in response.keys(), f"No content in doc {doc_id} on url {url}"
     return response["content"]
+
+def get_data_filename(model, collection):
+    """
+    converts a model name and collection name into an alphanumeric filename
+    e.g.  'llama3.2:latest' 'ai-edu-all'
+    goes to aieduallllama32latest
+    """
+    dfile = collection + "-" + model
+    dfile = re.sub(r'[^a-zA-Z0-9]', '', dfile)
+    return dfile
+
 
 def get_text_summary(text:str):
     """
@@ -313,7 +354,7 @@ def split_text_semantic(text:str):
 
 
 
-def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_tags.txt'):
+def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_tags.txt', tag_clean_model="llama3.2:3b-instruct-q8_0"):
     """
     generate a list of tags for the sent text
     """
@@ -327,7 +368,7 @@ def generate_tags(text:str, model:str, lm_studio_mode=False, bad_tags_file='bad_
 
     # now ask it to format it as json
     prompt = f"Please format the following list of tags into a JSON list format. Only print the tags in the JSON list, do not explain it, do not make it a dictionary. Here is an example of the format: ['tag 1', 'tag 2'] Here are the tags: \"{tags}\""
-    tags_raw = get_chat_completion(prompt, model="llama3.2:latest")
+    tags_raw = get_chat_completion(prompt, model=tag_clean_model)
 
     # print(f"\n\n***Raw tag data: {tags_raw}")
     # now try for a rough parsing of the data into JSON
@@ -518,7 +559,7 @@ def cluster_items(embeddings, pca_n, k):
     cluster_labels = kmeans.fit_predict(normed_embeddings)
     return cluster_labels
 
-def tags_to_theme(tags, lm_studio_mode, model):
+def tags_to_theme(tags, lm_studio_mode, model, title_clean_model='llama3.2:3b-instruct-q8_0'):
     research_questions = """
 RQ1: To what extent do academic staff fear that LLM systems will replace or significantly alter their role in exam setting and marking, potentially threatening their job security, autonomy, or ability to exercise professional judgment, and how does this impact their acceptance of these systems? 
 
@@ -553,7 +594,7 @@ RQ2: To what extent do academic staff trust the accuracy and fairness of LLM sys
     # stage to ensure we just get the title 
     prompt = f"Please read the following text and extract the theme title. Present the title in JSON format. Do not explain it, do not make it a dictionary. Here is an example of the format: [\"title\"]. Here is the text: \"{result}\""
     
-    title_raw = get_chat_completion(prompt, model="llama3.2:latest")
+    title_raw = get_chat_completion(prompt, model=title_clean_model)
     # print(f"Got raw title {title_raw}")
     bad_themes_file = "bad_themes.txt"
     try:

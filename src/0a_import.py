@@ -31,5 +31,5 @@ if __name__ == "__main__":
 
     # verify the docs are there
     docs = ta_utils.get_docs_in_collection(collection_id)
-    assert len(docs) == len(file_list), f"Found {len(docs)} in collection but wanted {len(file_list)}"
+    assert len(docs) >= len(file_list), f"Found {len(docs)} in collection but wanted at least {len(file_list)}"
     print(f"Added {len(file_list)} docs to collection {collection_id}")

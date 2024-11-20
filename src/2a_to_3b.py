@@ -21,6 +21,7 @@
 import os
 import subprocess
 import sys
+import ta_utils
 
 if __name__ == "__main__":
 
@@ -28,8 +29,11 @@ if __name__ == "__main__":
     # datasets = ["collusionmac", "examsettermac"]
     # models = ["gemma27b", "llama323b", "llama3170b"]
 
-    datasets = ["examsetterv2"]
-    models = ["gemma27b"]
+    # datasets = ["examsetterv2"]
+    # models = ["gemma27b"]
+    datasets = ["ai-edu-all"]
+    models = ["gemma2:27b-instruct-q8_0", "llama3.1:70b-instruct-q4_0"]
+    # models = ["llama3.2:3b-instruct-q8_0"]
 
     data_folder = sys.argv[1]
 
@@ -44,7 +48,9 @@ if __name__ == "__main__":
 
     for dataset in datasets:
         for model in models:
-            tag_json_file = f"{data_folder}{dataset}{model}.json"            
+            # the first script 2a generates the files for the other ones
+            file_base = ta_utils.get_data_filename(model=model, collection=dataset)
+            tag_json_file = f"{data_folder}{file_base}.json"            
             clean_tag_json_file = tag_json_file[0:-5] + "_cleaned.json"
             clean_tag_csv_file = tag_json_file[0:-5] + "_cleaned.csv"
 
@@ -52,7 +58,14 @@ if __name__ == "__main__":
             cluster_csv_file = f"{embeddings_csv_file[0:-4]}_clusters.csv"
             theme_csv_file = f"{embeddings_csv_file[0:-4]}_clusters_themes.csv"
         
-
+            if "2a" in stages:
+                # EXTRACT TAGS
+                # assert os.path.exists(tag_json_file), f"Cannot find tag file for {dataset} {model} : {tag_json_file}"
+                runner = f"python 2a_tags.py {dataset} 3 2 {model} {data_folder}"
+                print(f"Running: {runner}")
+                result = subprocess.run(runner, shell=True)
+                assert result.returncode == 0, f"Script {runner} failed "
+     
             if "2b" in stages:
                 # CLEAN TAGS
                 assert os.path.exists(tag_json_file), f"Cannot find tag file for {dataset} {model} : {tag_json_file}"
@@ -89,7 +102,7 @@ if __name__ == "__main__":
                 assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
                 assert os.path.exists(clean_tag_csv_file), f"Cannot find clean tag csv file {clean_tag_csv_file}"
                 
-                runner = f"python 4a_clusters_to_themes.py {cluster_csv_file} {clean_tag_csv_file} llama3.1:70b-instruct-q5_K_M"
+                runner = f"python 4a_clusters_to_themes.py {cluster_csv_file} {clean_tag_csv_file} {model}"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "

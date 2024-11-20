@@ -38,7 +38,9 @@ if __name__ == "__main__":
             # prompt = f"I have collected the following phrases together because they relate to a theme. Please can you write a descriptive title for the theme that represents the important elements of the phrases. Here are the phrases: \"{tag_set}\". You only need to print out the theme title. Do not explain the title. "
             # theme_title = ta_utils.get_chat_completion_lmstudio(prompt, "model") # can't dynamically load models anyways
 
-            theme_title = ta_utils.tags_to_theme(tag_set, lm_studio_mode=True, model=model)
+            # theme_title = ta_utils.tags_to_theme(tag_set, lm_studio_mode=True, model=model)
+            theme_title = ta_utils.tags_to_theme(tag_set, lm_studio_mode=False, model=model)
+
             # theme_title = f"test {c_ind}"
             theme_dict[c_ind] = theme_title
             # print(f"Got theme title {theme_title}")
