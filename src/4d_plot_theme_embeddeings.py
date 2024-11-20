@@ -13,80 +13,6 @@ import matplotlib.pyplot as plt
 import matplotlib.markers as mmarkers
 import textwrap
 
-# def do_tsne_plot_v4(embeddings, themes, title, plot_file):
-#     # Fit t-SNE
-#     tsne = TSNE(n_components=2, perplexity=10, random_state=42)
-#     reduced_embeddings = tsne.fit_transform(embeddings)
-
-#     # Wrap text function
-#     def wrap_text(text, width=30):
-#         return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
-
-#     # Plotting
-#     plt.figure(figsize=(12, 8))  # Adjust figure width to accommodate legend
-#     plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], color="blue", alpha=0.5)
-
-#     # Numerical labels at each (x, y) point
-#     for i, (x, y) in enumerate(reduced_embeddings):
-#         plt.text(
-#             x, y, str(i),  # Display index as label
-#             fontsize=10, fontweight='bold', ha='center', va='center', color='black',
-#             bbox=dict(facecolor='white', alpha=0.6, edgecolor='gray', boxstyle='round,pad=0.5')
-#         )
-
-#     # Add a legend with wrapped theme text
-#     wrapped_themes = [wrap_text(theme, width=30) for theme in themes]
-#     for i, theme_text in enumerate(wrapped_themes):
-#         plt.plot([], [], ' ', label=f"{i}: {theme_text}")  # Invisible point with label
-
-#     # Position the legend outside the plot area to the right
-#     plt.legend(
-#         loc='center left', bbox_to_anchor=(1.05, 0.5), title="Theme Key",
-#         fontsize=6, title_fontsize='8', frameon=True, edgecolor="gray"
-#     )
-
-#     # Labels and title
-#     plt.xlabel("t-SNE Dimension 1")
-#     plt.ylabel("t-SNE Dimension 2")
-#     plt.title(title)
-
-#     # Adjust layout to fit legend without overlapping
-#     plt.tight_layout(rect=[0, 0, 0.85, 1])  # Reserve space for legend on the right
-#     plt.savefig(plot_file, bbox_inches="tight")
-
-# def do_tsne_plot_v3(embeddings, themes, title, plot_file):
-#     # Fit t-SNE
-#     tsne = TSNE(n_components=2, perplexity=10, random_state=42)
-#     reduced_embeddings = tsne.fit_transform(embeddings)
-
-#     # Wrap text function
-#     def wrap_text(text, width=30):
-#         return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
-
-#     # Plotting
-#     plt.figure(figsize=(10, 8))
-#     plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], color="blue", alpha=0.5)
-
-#     # Numerical labels at each (x, y) point and theme legend
-#     for i, (x, y) in enumerate(reduced_embeddings):
-#         plt.text(
-#             x, y, str(i),  # Display index as label
-#             fontsize=10, fontweight='bold', ha='center', va='center', color='black',
-#             bbox=dict(facecolor='white', alpha=0.6, edgecolor='gray', boxstyle='round,pad=0.5')
-#         )
-
-#     # Add a legend with wrapped theme text
-#     wrapped_themes = [wrap_text(theme, width=30) for theme in themes]
-#     for i, theme_text in enumerate(wrapped_themes):
-#         plt.plot([], [], ' ', label=f"{i}: {theme_text}")  # Invisible point with label
-
-#     plt.legend(loc='upper right', title="Theme Key", fontsize=8, title_fontsize='10', frameon=True, edgecolor="gray")
-
-#     plt.xlabel("t-SNE Dimension 1")
-#     plt.ylabel("t-SNE Dimension 2")
-#     plt.title(title)
-#     plt.savefig(plot_file)
-
 def do_tsne_plot_v2(embeddings, themes, title, plot_file, theme_index = True):
     # Fit t-SNE
     tsne = TSNE(n_components=2, perplexity=10, random_state=42)
@@ -103,22 +29,44 @@ def do_tsne_plot_v2(embeddings, themes, title, plot_file, theme_index = True):
     plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], color="blue", alpha=0.0)
 
     for i, (x, y) in enumerate(reduced_embeddings):
+        # split_ratio = theme_splits[i]
+        split_ratio = np.random.random()
+        theme_text = theme_to_ind[themes[i]] if theme_index else wrap_text(themes[i], width=30)
+        theme_text = str(theme_text)
+        # Calculate text split
+        split_index = int(len(theme_text) * split_ratio)
+        text_black = theme_text[:split_index]
+        text_white = theme_text[split_index:]
 
-        if theme_index:
-            theme_text = theme_to_ind[themes[i]]
-            plt.text(
-                x, y, theme_text, 
-                fontsize=20, fontweight='bold', ha='center', va='center', color='white',
-                bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
-            )
+        # Render text with gradient effect
+        plt.text(
+            x, y, text_black, 
+            fontsize=20, fontweight='bold', ha='center', va='center', color='black',
+            bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+        )
+        plt.text(
+            x, y, text_white,
+            fontsize=20, fontweight='bold', ha='center', va='center', color='white',
+            bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5'),
+            zorder=10  # Ensure it overlays the black text correctly
+        )
+
+
+        # if theme_index:
+        #     theme_text = theme_to_ind[themes[i]]
+        #     plt.text(
+        #         x, y, theme_text, 
+        #         fontsize=20, fontweight='bold', ha='center', va='center', color='white',
+        #         bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+        #     )
   
-        else: 
-            theme_text = wrap_text(themes[i], width=30)  # Wrap theme text
-            plt.text(
-                x, y, theme_text, 
-                fontsize=6, fontweight='bold', ha='center', va='center', color='black',
-                bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
-            )
+        # else: 
+        #     theme_text = wrap_text(themes[i], width=30)  # Wrap theme text
+        #     plt.text(
+        #         x, y, theme_text, 
+        #         fontsize=6, fontweight='bold', ha='center', va='center', color='black',
+        #         bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+        #     )
   
 
     plt.xlabel("t-SNE Dimension 1")
