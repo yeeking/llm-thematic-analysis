@@ -39,34 +39,34 @@ def do_tsne_plot_v2(embeddings, themes, title, plot_file, theme_index = True):
         text_white = theme_text[split_index:]
 
         # Render text with gradient effect
-        plt.text(
-            x, y, text_black, 
-            fontsize=20, fontweight='bold', ha='center', va='center', color='black',
-            bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
-        )
-        plt.text(
-            x, y, text_white,
-            fontsize=20, fontweight='bold', ha='center', va='center', color='white',
-            bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5'),
-            zorder=10  # Ensure it overlays the black text correctly
-        )
+        # plt.text(
+        #     x, y, text_black, 
+        #     fontsize=20, fontweight='bold', ha='center', va='center', color='black',
+        #     bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+        # )
+        # plt.text(
+        #     x, y, text_white,
+        #     fontsize=20, fontweight='bold', ha='center', va='center', color='white',
+        #     bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5'),
+        #     zorder=10  # Ensure it overlays the black text correctly
+        # )
 
 
-        # if theme_index:
-        #     theme_text = theme_to_ind[themes[i]]
-        #     plt.text(
-        #         x, y, theme_text, 
-        #         fontsize=20, fontweight='bold', ha='center', va='center', color='white',
-        #         bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
-        #     )
+        if theme_index:
+            theme_text = theme_to_ind[themes[i]]
+            plt.text(
+                x, y, theme_text, 
+                fontsize=20, fontweight='bold', ha='center', va='center', color='white',
+                bbox=dict(facecolor='black', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+            )
   
-        # else: 
-        #     theme_text = wrap_text(themes[i], width=30)  # Wrap theme text
-        #     plt.text(
-        #         x, y, theme_text, 
-        #         fontsize=6, fontweight='bold', ha='center', va='center', color='black',
-        #         bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
-        #     )
+        else: 
+            theme_text = wrap_text(themes[i], width=30)  # Wrap theme text
+            plt.text(
+                x, y, theme_text, 
+                fontsize=6, fontweight='bold', ha='center', va='center', color='black',
+                bbox=dict(facecolor='white', alpha=0.3, edgecolor='gray', boxstyle='round,pad=0.5')
+            )
   
 
     plt.xlabel("t-SNE Dimension 1")

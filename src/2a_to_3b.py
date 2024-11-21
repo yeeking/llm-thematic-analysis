@@ -32,7 +32,9 @@ if __name__ == "__main__":
     # datasets = ["examsetterv2"]
     # models = ["gemma27b"]
     datasets = ["ai-edu-all"]
-    models = ["gemma2:27b-instruct-q8_0", "llama3.1:70b-instruct-q4_0"]
+    models = ["gemma2:27b-instruct-q8_0"]
+    
+    # models = ["gemma2:27b-instruct-q8_0", "llama3.1:70b-instruct-q4_0"]
     # models = ["llama3.2:3b-instruct-q8_0"]
 
     data_folder = sys.argv[1]
@@ -114,7 +116,7 @@ if __name__ == "__main__":
                 assert os.path.exists(theme_csv_file), f"Cannot find theme csv file {theme_csv_file}"
                 assert os.path.exists(embeddings_csv_file), f"Cannot find tag embeddings_csv_file csv file {embeddings_csv_file}"
                 
-                runner = f"python 4b_theme_visualisation.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_tags_and_themes.pdf '{dataset} {model} tags and themes via t-SNE'"
+                runner = f"python 4b_plot_tags_with_themes.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_tags_and_themes.pdf '{dataset} {model} tags and themes via t-SNE'"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "

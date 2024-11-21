@@ -109,7 +109,7 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
         return "\n".join(textwrap.wrap(text, width=width, break_long_words=False))
 
     # Plot
-    plt.figure(figsize=(15, 8))
+    plt.figure(figsize=(20, 10))
     # plt.figure(figsize=(28, 20))
     # Loop through each unique cluster and plot points with different symbols and grayscale colors
     for idx, (cluster, color, marker) in enumerate(zip(sorted(data['cluster'].unique()), grayscale_colors, symbols)):
@@ -132,12 +132,19 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
             theme_text = theme_to_ind[themes]
             fontsize = 20
             # Place the label with theme(s) at the centroid with a semi-transparent box
+            theme_shade = np.random.uniform(0, 1)
+
+            plt.text(
+                centroid_x, centroid_y-3.0, theme_text, 
+                fontsize=fontsize, fontweight='bold', ha='center', va='center', color=(theme_shade, theme_shade, theme_shade),
+                bbox=dict(facecolor=(theme_shade, theme_shade, theme_shade), alpha=1.0, edgecolor='black', boxstyle='round,pad=0.1')
+            )
+
             plt.text(
                 centroid_x, centroid_y, theme_text, 
                 fontsize=fontsize, fontweight='bold', ha='center', va='center', color='white',
-                bbox=dict(facecolor='black', alpha=0.6, edgecolor='gray', boxstyle='round,pad=0.5')
+                bbox=dict(facecolor='black', alpha=1.0, edgecolor='black', boxstyle='round,pad=0.1')
             )
-
         else:
             theme_text = wrap_text(f"{cluster}: {themes}", width=30)
             fontsize = 10
@@ -147,8 +154,19 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
                 fontsize=fontsize, fontweight='bold', ha='center', va='center', color='black',
                 bbox=dict(facecolor='white', alpha=0.6, edgecolor='gray', boxstyle='round,pad=0.5')
             )
-
-        
+    fontsize = 20
+    plt.legend(
+        handles=[
+            plt.Rectangle((0, 0), 1, 1, color='white', edgecolor='black', label='Exam', linewidth=1.5),
+            plt.Rectangle((0, 0), 1, 1, color='gray', edgecolor='black', label='Both', linewidth=1.5),
+            plt.Rectangle((0, 0), 1, 1, color='black', edgecolor='black', label='Collusion', linewidth=1.5)
+        ],
+        loc='upper right',  # Adjust as needed
+        title="Theme mixture",
+        fontsize=fontsize,  # Set font size
+        facecolor="lightgray",  # Set legend background color to grey
+        title_fontsize=fontsize  # Set title font size
+    )  
       
     plt.xlabel("t-SNE Dimension 1")
     plt.ylabel("t-SNE Dimension 2")
