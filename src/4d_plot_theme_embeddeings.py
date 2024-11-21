@@ -1,5 +1,6 @@
 # 4d_plot_theme_embeddeings.py
 ### Render the themes via embeddings
+### Generates a plot with just the themes 
 ### and T-sNE
 import pandas as pd
 import ta_utils

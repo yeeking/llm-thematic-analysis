@@ -59,6 +59,7 @@ if __name__ == "__main__":
             embeddings_csv_file = clean_tag_json_file[0:-5] + "_embeddings.csv"
             cluster_csv_file = f"{embeddings_csv_file[0:-4]}_clusters.csv"
             theme_csv_file = f"{embeddings_csv_file[0:-4]}_clusters_themes.csv"
+            theme_stats_csv_file = tag_json_file[0:-5]+ "_theme_stats.csv" 
         
             if "2a" in stages:
                 # EXTRACT TAGS
@@ -108,15 +109,29 @@ if __name__ == "__main__":
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "
-            
+
             if "4b" in stages:
-                print("Generating TAG and THEME plots")
+                print("Computing the splits of tags across datasets")
                 ## convert tags in clusters to themes
                 # assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
                 assert os.path.exists(theme_csv_file), f"Cannot find theme csv file {theme_csv_file}"
-                assert os.path.exists(embeddings_csv_file), f"Cannot find tag embeddings_csv_file csv file {embeddings_csv_file}"
+                # assert os.path.exists(embeddings_csv_file), f"Cannot find tag embeddings_csv_file csv file {embeddings_csv_file}"
                 
-                runner = f"python 4b_plot_tags_with_themes.py {embeddings_csv_file} {theme_csv_file} ../plots/{dataset}_{model}_tags_and_themes.pdf '{dataset} {model} tags and themes via t-SNE'"
+                runner = f"python 4b_compute_theme_quote_splits.py {theme_csv_file} {theme_stats_csv_file}"
+                print(f"Running: {runner}")  
+                result = subprocess.run(runner, shell=True)
+                assert result.returncode == 0, f"Script {runner} failed "
+
+
+            if "4c" in stages:
+                print("Generating TAG and THEME plots")
+
+                # assert os.path.exists(cluster_csv_file), f"Cannot find cluster file {cluster_csv_file}"
+                assert os.path.exists(theme_csv_file), f"Cannot find theme csv file {theme_csv_file}"
+                assert os.path.exists(embeddings_csv_file), f"Cannot find tag embeddings_csv_file csv file {embeddings_csv_file}"
+                assert os.path.exists(theme_stats_csv_file), f"Cannot find theme csv file {theme_stats_csv_file}"
+                
+                runner = f"python 4c_plot_tags_with_themes.py {embeddings_csv_file} {theme_csv_file} {theme_stats_csv_file} ../plots/{dataset}_{model}_tags_and_themes.pdf '{dataset} {model} tags and themes via t-SNE'"
                 print(f"Running: {runner}")  
                 result = subprocess.run(runner, shell=True)
                 assert result.returncode == 0, f"Script {runner} failed "

@@ -1,4 +1,10 @@
-## Plot tags as markers with themes overlaid. 
+
+### Generates a plot with all the themes shown as numerical boxes and all the tags shown as symbols
+### each tag has a symbol assigned based on cluster
+### This is the one that went into the paper
+### under the 
+
+## Plot tags as markers with themes overlaid. -
 ## This is figure 
 
 import pandas as pd
@@ -65,7 +71,7 @@ def combine_files(f1, f2):
     # Save the updated dataframe to 'tags.csv'
     df1.to_csv('tags.csv', index=False)
 
-def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
+def do_tsne_plot_v2(csv_file, title, plot_file, theme_stats_df, label_theme_with_index = True):
 
     # Load data from CSV
     data = pd.read_csv(csv_file)
@@ -74,8 +80,8 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
     data['embedding_vector'] = data['embeddings'].apply(json.loads)
 
     # make a theme -> index look up based on making alphabetical list of themes
-    themes = data["theme"].unique()
-    theme_to_ind = ta_utils.get_theme_to_ind_lookup(themes)
+    theme = data["theme"].unique()
+    theme_to_ind = ta_utils.get_theme_to_ind_lookup(theme)
 
 
     # Stack all embeddings into a 2D numpy array
@@ -113,7 +119,7 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
     # plt.figure(figsize=(28, 20))
     # Loop through each unique cluster and plot points with different symbols and grayscale colors
     for idx, (cluster, color, marker) in enumerate(zip(sorted(data['cluster'].unique()), grayscale_colors, symbols)):
-        print(f"Cluste {idx}")
+        print(f"Cluster {idx}")
         cluster_data = data[data['cluster'] == cluster]
         plt.scatter(
             cluster_data['x'], cluster_data['y'], 
@@ -127,13 +133,21 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
         centroid_y = cluster_data['y'].mean()
         
         # Get the theme name(s) for this cluster, prepend cluster number, and wrap text if it exceeds 30 characters
-        themes = ", ".join(cluster_data['theme'].unique())
-        if theme_index:
-            theme_text = theme_to_ind[themes]
+        theme = ", ".join(cluster_data['theme'].unique())# ?? a bit bonkers... GPT attack
+        print(f"Plotting theme {theme} index {theme_to_ind[theme]}")
+        if label_theme_with_index:
+            theme_text = theme_to_ind[theme]
             fontsize = 20
             # Place the label with theme(s) at the centroid with a semi-transparent box
-            theme_shade = np.random.uniform(0, 1)
+            stats = theme_stats_df[theme_stats_df["theme"] == theme]
 
+            print(f"Got stats for theme: {list(stats['exam_ratio'])}")
+
+            # theme_shade = list(theme_stats_df[theme_stats_df["theme"] == theme]["collusion_ratio"])[0]
+            # theme_shade = np.random.uniform(0, 1)
+            theme_shade = list(stats['exam_ratio'])[0]
+            # this box is used to show the ratio from exam to collusion of the quotes
+            # for this theme
             plt.text(
                 centroid_x, centroid_y-3.0, theme_text, 
                 fontsize=fontsize, fontweight='bold', ha='center', va='center', color=(theme_shade, theme_shade, theme_shade),
@@ -145,8 +159,8 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
                 fontsize=fontsize, fontweight='bold', ha='center', va='center', color='white',
                 bbox=dict(facecolor='black', alpha=1.0, edgecolor='black', boxstyle='round,pad=0.1')
             )
-        else:
-            theme_text = wrap_text(f"{cluster}: {themes}", width=30)
+        else: # show the proper title
+            theme_text = wrap_text(f"{cluster}: {theme}", width=30)
             fontsize = 10
               # Place the label with theme(s) at the centroid with a semi-transparent box
             plt.text(
@@ -179,20 +193,26 @@ def do_tsne_plot_v2(csv_file, title, plot_file, theme_index = True):
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 5, f"Usage python script.py embeddings_csv themes.csv plot_file plot title"
+    assert len(sys.argv) == 6, f"Usage python script.py embeddings_csv themes.csv theme_stats.csv plot_file plot title"
     f1 = sys.argv[1]
     f2 = sys.argv[2]
-    plot_file = sys.argv[3]
-    plot_title = sys.argv[4]
+    theme_stats_csv = sys.argv[3]
+    plot_file = sys.argv[4]
+    plot_title = sys.argv[5]
     
     assert os.path.exists(f1), f"Embeddings file not found {f1}"
     assert os.path.exists(f2), f"Themes file not found {f2}"
+    assert os.path.exists(theme_stats_csv), f"Themes stats file not found {theme_stats_csv}"
     
     print("Combining data:")
     
     # f1 = 'collusionmacllama3170b_cleaned_embeddings.csv'
     # f2 = 'collusionmacllama3170b_cleaned_embeddings_clusters_themes.csv'
     combine_files(f1, f2)
+    theme_stats_data = pd.read_csv(theme_stats_csv)
+    want_keys = ["theme_id", "collusion_ratio", "exam_ratio"]
+    for k in want_keys: assert k in theme_stats_data.keys(), f"Theme stats missing key {k} - got {theme_stats_data.keys()}"
+    
     # title = plot_file[0:-4] # that should have the dataset and model in it 
     print("Doing tSNE and writing plot file")
-    do_tsne_plot_v2('tags.csv', plot_title,  plot_file)
+    do_tsne_plot_v2('tags.csv', plot_title,  plot_file, theme_stats_data)
