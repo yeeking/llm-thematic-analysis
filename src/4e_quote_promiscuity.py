@@ -65,9 +65,10 @@ if __name__ == "__main__":
         for ind2,theme2 in enumerate(themes):
             # if theme1 == theme2: continue
             key = theme1 + "_" + theme2
-            # alt_key = theme2 + "_" + theme1
+            alt_key = theme2 + "_" + theme1
+            if theme1 == theme2: continue
             if key in theme_stats.keys():continue
-            # if alt_key in theme_stats.keys():continue
+            if alt_key in theme_stats.keys():continue
             
             quotes2 = theme_to_quotes[theme2]
             emb2 = embeddings[ind2]
