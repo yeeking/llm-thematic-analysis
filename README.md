@@ -1,6 +1,13 @@
 # llm-thematic-analysis
 Workflows to use LLM for thematic and qualitative analysis
 
+## The run everything script
+
+Ultimately, you want to run
+
+```
+src/run_all_stages.py
+```
 
 ## Setup the servers
 
